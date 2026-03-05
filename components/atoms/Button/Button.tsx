@@ -1,5 +1,7 @@
+import React from 'react';
 import {
   Pressable,
+  View,
   StyleSheet,
   type PressableProps,
   ActivityIndicator,
@@ -7,6 +9,13 @@ import {
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
+
+function isTextOnly(children: React.ReactNode): boolean {
+  const c = React.Children.toArray(children);
+  if (c.length !== 1) return c.length === 0;
+  const child = c[0];
+  return typeof child === 'string' || typeof child === 'number';
+}
 
 export type ButtonProps = PressableProps & {
   variant?: 'default' | 'outline' | 'link' | 'destructive';
@@ -43,9 +52,11 @@ export function Button({
   };
 
   const textColor =
-    variant === 'default' || variant === 'destructive'
+    variant === 'default'
       ? colors.primaryForeground
-      : colors.primary;
+      : variant === 'destructive'
+        ? colors.destructiveForeground
+        : colors.primary;
 
   return (
     <Pressable
@@ -61,7 +72,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator size="small" color={textColor} />
-      ) : (
+      ) : isTextOnly(children) ? (
         <ThemedText
           style={[
             styles.text,
@@ -71,6 +82,8 @@ export function Button({
         >
           {children}
         </ThemedText>
+      ) : (
+        <View style={styles.contentRow}>{children}</View>
       )}
     </Pressable>
   );
@@ -85,6 +98,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 44,
   },
+  contentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   pressed: { opacity: 0.9 },
   disabled: { opacity: 0.5 },
   text: { fontWeight: '600', fontSize: 16 },
