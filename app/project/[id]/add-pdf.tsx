@@ -7,12 +7,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import Feather from '@expo/vector-icons/Feather';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseAuth, getFirestoreDb } from '@/lib/firebase';
 import {
   processSources,
@@ -22,21 +22,21 @@ import {
   type PdfSource,
 } from '@/lib/content-processing';
 import type { ProcessContentResponse } from '@/types/process-content';
+import type { Material } from '@/types/project';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/atoms/Button';
-import { Input } from '@/components/atoms/Input';
 import { UploadSourcesForm, ProcessedResultsList } from '@/components/upload';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 
-export default function NewProjectScreen() {
+export default function AddPdfScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
-  const [projectName, setProjectName] = useState('');
   const [pdfSources, setPdfSources] = useState<PdfSource[]>([]);
   const [imageSources, setImageSources] = useState<ImageSource[]>([]);
   const [pdfAvailable, setPdfAvailable] = useState<boolean | null>(null);
@@ -170,23 +170,26 @@ export default function NewProjectScreen() {
     }
   }, [pdfSources, imageSources, mergeAllIntoOne, topicCount]);
 
-  const handleSaveProject = useCallback(async () => {
-    if (results.length === 0) return;
+  const handleSaveToProject = useCallback(async () => {
+    if (!id || results.length === 0) return;
     const auth = getFirebaseAuth();
     const db = getFirestoreDb();
     const user = auth?.currentUser;
     if (!user || !db) {
-      setError('Faça login para salvar o projeto.');
+      setError('Faça login para continuar.');
       return;
     }
     setIsSaving(true);
     setError(null);
     try {
-      const title =
-        projectName.trim() ||
-        (pdfSources.length > 0 ? pdfSources[0].name.replace(/\.pdf$/i, '') : null) ||
-        (imageSources.length > 0 ? 'Fotos' : 'Sem título');
-      const materiais = results.map((result, i) => ({
+      const projectRef = doc(db, 'projects', id);
+      const snap = await getDoc(projectRef);
+      if (!snap.exists() || snap.data()?.userId !== user.uid) {
+        setError('Projeto não encontrado.');
+        return;
+      }
+      const existing = (snap.data().materiais ?? []) as Material[];
+      const newMateriais: Material[] = results.map((result, i) => ({
         id: `material-${Date.now()}-${i}`,
         nomeArquivo: getTopicDisplayNameWithPdfNames(i, pdfSources, imageSources.length),
         resumo: result.resumo,
@@ -194,24 +197,21 @@ export default function NewProjectScreen() {
         resumoMedio: result.resumoMedio,
         resumoCompleto: result.resumoCompleto,
         cards: result.cards,
+        status: 'pending',
       }));
-      await addDoc(collection(db, 'projects'), {
-        userId: user.uid,
-        title,
-        emoji: '📚',
-        pdfCount: materiais.length,
-        progress: 0,
-        materiais,
+      const updated = [...existing, ...newMateriais];
+      await updateDoc(projectRef, {
+        materiais: updated,
+        pdfCount: updated.length,
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
       });
-      router.replace('/(tabs)');
+      router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar no Firebase.');
+      setError(err instanceof Error ? err.message : 'Erro ao salvar no projeto.');
     } finally {
       setIsSaving(false);
     }
-  }, [results, projectName, pdfSources, imageSources.length, router]);
+  }, [id, results, pdfSources, imageSources.length, router]);
 
   return (
     <ThemedView style={styles.container}>
@@ -234,23 +234,11 @@ export default function NewProjectScreen() {
           </ThemedText>
         </TouchableOpacity>
 
-        <ThemedText style={styles.title}>Novo projeto de estudo</ThemedText>
+        <ThemedText style={styles.title}>Adicionar PDF ou fotos</ThemedText>
         <ThemedText style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Envie PDFs e/ou fotos de páginas. Você pode juntar tudo em um único
-          tópico ou gerar um tópico por arquivo.
+          Envie PDFs e/ou fotos para gerar novos tópicos neste projeto. Você pode
+          juntar tudo em um tópico ou gerar um tópico por arquivo.
         </ThemedText>
-
-        <View style={styles.field}>
-          <ThemedText style={[styles.label, { color: colors.foreground }]}>
-            Nome do projeto
-          </ThemedText>
-          <Input
-            placeholder="Ex.: Projeto"
-            value={projectName}
-            onChangeText={setProjectName}
-            style={styles.input}
-          />
-        </View>
 
         <UploadSourcesForm
           pdfSources={pdfSources}
@@ -279,18 +267,14 @@ export default function NewProjectScreen() {
             imageCount={imageSources.length}
             onRemoveResult={removeResult}
           >
-            <Button
-              onPress={handleSaveProject}
-              disabled={isSaving}
-              style={styles.saveBtn}
-            >
+            <Button onPress={handleSaveToProject} disabled={isSaving} style={styles.saveBtn}>
               {isSaving ? (
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
               ) : (
                 <>
                   <Feather name="save" size={18} color={colors.primaryForeground} style={{ marginRight: 8 }} />
                   <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>
-                    Criar projeto com {results.length} tópico(s)
+                    Adicionar {results.length} tópico(s) ao projeto
                   </ThemedText>
                 </>
               )}
@@ -310,8 +294,5 @@ const styles = StyleSheet.create({
   backText: { fontSize: 14 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
   subtitle: { fontSize: 16, marginBottom: 24 },
-  field: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  input: { marginBottom: 0 },
   saveBtn: { width: '100%' },
 });
