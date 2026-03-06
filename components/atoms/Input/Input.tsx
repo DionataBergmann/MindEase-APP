@@ -3,7 +3,7 @@ import {
   StyleSheet,
   type TextInputProps,
 } from 'react-native';
-import { forwardRef } from 'react';
+import React, { forwardRef } from 'react';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 

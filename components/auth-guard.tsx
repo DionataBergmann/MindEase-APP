@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuthState } from '@/hooks/use-auth-state';
