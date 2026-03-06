@@ -8,7 +8,7 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import {
@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getFirebaseAuth, getFirestoreDb } from '@/lib/firebase';
+import { getPreferences } from '@/lib/preferences';
 import { getNextReviewDateFromLevel } from '@/lib/spaced-repetition';
 import type { Project, Material, MaterialStatus } from '@/types/project';
 import { ThemedText } from '@/components/themed-text';
@@ -29,6 +30,7 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useSpacingScale, useContrastLevel, usePreferencesContext } from '@/contexts/PreferencesContext';
 
 function formatLastAccess(ts: Timestamp | undefined): string {
   if (!ts) return '—';
@@ -59,6 +61,10 @@ export default function ProjectDetailScreen() {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const spacingScale = useSpacingScale();
+  const contrastLevel = useContrastLevel();
+  const borderW = contrastLevel === 'alto' ? 2 : 1;
+  const prefsContext = usePreferencesContext();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +78,7 @@ export default function ProjectDetailScreen() {
   const [editMaterialName, setEditMaterialName] = useState('');
   const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [transitionModal, setTransitionModal] = useState<{ href: string; message: string } | null>(null);
   const menuAnchorRef = useRef<View>(null);
   const overlayRef = useRef<View>(null);
   const [menuAnchorLayout, setMenuAnchorLayout] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -188,6 +195,12 @@ export default function ProjectDetailScreen() {
     const cleanup = loadProject();
     return cleanup;
   }, [loadProject]);
+
+  useFocusEffect(
+    useCallback(() => {
+      prefsContext?.refresh();
+    }, [prefsContext])
+  );
 
   const materials: Material[] =
     project?.materiais && project.materiais.length > 0
@@ -322,6 +335,33 @@ export default function ProjectDetailScreen() {
     [project]
   );
 
+  const handleStudyMaterial = useCallback(
+    async (m: Material) => {
+      const p = await getPreferences();
+      if (p.avisoTransicao) {
+        setTransitionModal({
+          href: `/project/${id}/material/${m.id}`,
+          message: `Você vai estudar "${m.nomeArquivo ?? 'tópico'}". Pronto para continuar?`,
+        });
+      } else {
+        router.push(`/project/${id}/material/${m.id}` as any);
+      }
+    },
+    [id, router]
+  );
+
+  const handleStudyAll = useCallback(async () => {
+    const p = await getPreferences();
+    if (p.avisoTransicao) {
+      setTransitionModal({
+        href: `/project/${id}/estudar`,
+        message: 'Você vai estudar todos os tópicos. Pronto para continuar?',
+      });
+    } else {
+      router.push(`/project/${id}/estudar` as any);
+    }
+  }, [id, router]);
+
   const renderMaterialCard = useCallback(
     (m: Material) => {
       const status = getStatus(m);
@@ -329,11 +369,11 @@ export default function ProjectDetailScreen() {
       return (
         <View
           key={m.id}
-          style={[styles.materialCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={[styles.materialCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: borderW }]}
         >
           <TouchableOpacity
             style={styles.materialContent}
-            onPress={() => router.push(`/project/${id}/material/${m.id}` as any)}
+            onPress={() => handleStudyMaterial(m)}
             activeOpacity={0.8}
           >
             <View style={styles.materialHeader}>
@@ -361,7 +401,7 @@ export default function ProjectDetailScreen() {
         </View>
       );
     },
-    [colors, materialMenuId, id, router]
+    [colors, materialMenuId, id, router, handleStudyMaterial, borderW]
   );
 
   const renderSection = useCallback(
@@ -458,7 +498,7 @@ export default function ProjectDetailScreen() {
           <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Adicionar PDF</ThemedText>
         </Button>
         <Button
-          onPress={() => router.push(`/project/${id}/estudar` as any)}
+          onPress={handleStudyAll}
           style={styles.headerBtn}
         >
           <Feather name="bookmark" size={18} color={colors.primaryForeground} style={{ marginRight: 6 }} />
@@ -479,12 +519,16 @@ export default function ProjectDetailScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+            {
+              paddingTop: (insets.top + 16) * spacingScale,
+              paddingBottom: (insets.bottom + 24) * spacingScale,
+              paddingHorizontal: 16 * spacingScale,
+            },
           ]}
           showsVerticalScrollIndicator={false}
         >
           {listHeader}
-          <View style={[styles.emptyMaterials, { borderColor: colors.border }]}>
+          <View style={[styles.emptyMaterials, { borderColor: colors.border, borderWidth: borderW }]}>
             <ThemedText style={[styles.emptyMaterialsText, { color: colors.mutedForeground }]}>
               Nenhum tópico ainda. Use &quot;Adicionar PDF&quot; para enviar o primeiro.
             </ThemedText>
@@ -498,7 +542,11 @@ export default function ProjectDetailScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+            {
+              paddingTop: (insets.top + 16) * spacingScale,
+              paddingBottom: (insets.bottom + 24) * spacingScale,
+              paddingHorizontal: 16 * spacingScale,
+            },
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -712,6 +760,24 @@ export default function ProjectDetailScreen() {
                 {saving ? <ActivityIndicator size="small" color={colors.destructiveForeground} /> : <ThemedText style={{ color: colors.destructiveForeground, fontWeight: '600' }}>Excluir</ThemedText>}
               </Button>
             </View>
+            </Pressable>
+          </Pressable>
+        </View>
+      )}
+
+      {transitionModal && (
+        <View style={styles.modalOverlay} pointerEvents="box-none">
+          <Pressable style={styles.modalBackdrop} onPress={() => setTransitionModal(null)}>
+            <Pressable style={[styles.modalBox, styles.modalBoxSm, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+              <ThemedText style={styles.modalBody}>{transitionModal.message}</ThemedText>
+              <View style={styles.modalActions}>
+                <Button variant="outline" onPress={() => setTransitionModal(null)}>
+                  <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Voltar</ThemedText>
+                </Button>
+                <Button onPress={() => { router.push(transitionModal.href as any); setTransitionModal(null); }}>
+                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Continuar</ThemedText>
+                </Button>
+              </View>
             </Pressable>
           </Pressable>
         </View>

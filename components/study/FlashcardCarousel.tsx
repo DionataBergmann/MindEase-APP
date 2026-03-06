@@ -5,13 +5,13 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
-  runOnUI,
 } from 'react-native-reanimated';
 import Feather from '@expo/vector-icons/Feather';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/atoms/Button';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useContrastLevel, useReducedAnimations } from '@/contexts/PreferencesContext';
 import type { ProjectCard } from '@/types/project';
 
 export type FlashcardCarouselMode = 'project' | 'material';
@@ -42,6 +42,8 @@ export function FlashcardCarousel({
 }: FlashcardCarouselProps) {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const contrastLevel = useContrastLevel();
+  const reducedAnimations = useReducedAnimations();
   const [slideDirection, setSlideDirection] = useState<1 | -1>(1);
 
   const flipRotation = useSharedValue(0);
@@ -51,18 +53,25 @@ export function FlashcardCarousel({
   const hasNext = cardIndex < cards.length - 1;
   const currentCard = cards[cardIndex] ?? null;
 
-  // Flip animation when flipped state changes
+  const borderW = contrastLevel === 'alto' ? 2 : 1;
+  const flipDuration = reducedAnimations ? 0 : FLIP_DURATION;
+
+  // Flip animation when flipped state changes (instant when reduced)
   useEffect(() => {
     flipRotation.value = withTiming(flipped ? 180 : 0, {
-      duration: FLIP_DURATION,
+      duration: flipDuration,
     });
-  }, [flipped, flipRotation]);
+  }, [flipped, flipRotation, flipDuration]);
 
-  // Slide animation when card index changes
+  // Slide animation when card index changes (instant when reduced)
   useEffect(() => {
-    slideOffset.value = slideDirection * 120;
-    slideOffset.value = withSpring(0, SLIDE_SPRING);
-  }, [cardIndex, slideDirection, slideOffset]);
+    if (reducedAnimations) {
+      slideOffset.value = 0;
+    } else {
+      slideOffset.value = slideDirection * 120;
+      slideOffset.value = withSpring(0, SLIDE_SPRING);
+    }
+  }, [cardIndex, slideDirection, slideOffset, reducedAnimations]);
 
   const handlePrev = () => {
     if (!hasPrev) return;
@@ -105,14 +114,14 @@ export function FlashcardCarousel({
   return (
     <View style={styles.wrapper}>
       <Pressable
-        style={[styles.cardContainer, { borderColor: colors.border, backgroundColor: colors.card }]}
+        style={[styles.cardContainer, { borderColor: colors.border, backgroundColor: colors.card, borderWidth: borderW }]}
         onPress={() => onFlippedChange(!flipped)}
       >
         <View style={styles.cardInner}>
           <Animated.View style={[styles.slideWrap, slideAnimatedStyle]}>
             <View style={styles.flipContainer} pointerEvents="none">
               <Animated.View
-                style={[styles.face, styles.faceFront, { backgroundColor: colors.card, borderColor: colors.border }, frontFaceStyle]}
+                style={[styles.face, styles.faceFront, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: borderW }, frontFaceStyle]}
               >
                 <ThemedText style={[styles.faceLabel, { color: colors.mutedForeground }]}>
                   Pergunta
@@ -120,7 +129,7 @@ export function FlashcardCarousel({
                 <ThemedText style={styles.faceTitle}>{currentCard.titulo}</ThemedText>
               </Animated.View>
               <Animated.View
-                style={[styles.face, styles.faceBack, { backgroundColor: colors.card, borderColor: colors.border }, backFaceStyle]}
+                style={[styles.face, styles.faceBack, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: borderW }, backFaceStyle]}
               >
                 <ThemedText style={[styles.faceLabel, { color: colors.mutedForeground }]}>
                   Resposta

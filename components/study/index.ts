@@ -1,5 +1,7 @@
 export { FlashcardCarousel } from './FlashcardCarousel';
 export type { FlashcardCarouselProps, FlashcardCarouselMode } from './FlashcardCarousel';
+export { StudyTimer } from './StudyTimer';
+export type { StudyTimerProps } from './StudyTimer';
 export { StudyQuizPanel } from './StudyQuizPanel';
 export type { StudyQuizPanelProps } from './StudyQuizPanel';
 export { StudyChat } from './StudyChat';
