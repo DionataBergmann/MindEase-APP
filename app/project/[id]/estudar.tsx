@@ -8,28 +8,40 @@ import {
   Modal,
   Pressable,
   TextInput,
+  Alert,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getFirebaseAuth, getFirestoreDb } from '@/lib/firebase';
+import {
+  getPreferences,
+  setPreferences,
+  getPreferredStudyTab,
+  getSessionDuration,
+  getDisplayResumo as getDisplayResumoFromPrefs,
+  type UserPreferences,
+} from '@/lib/preferences';
+import { isCardDueForReview } from '@/lib/spaced-repetition';
 import type { Project, ProjectCard, Material } from '@/types/project';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/atoms/Button';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useSpacingScale, useContrastLevel, usePreferencesContext } from '@/contexts/PreferencesContext';
 import {
   FlashcardCarousel,
   StudyQuizPanel,
   StudyChat,
   ProjectFlashcardEditor,
+  StudyTimer,
   type ProjectCardWithSource,
 } from '@/components/study';
 
-type StudyTab = 'flashcards' | 'quiz' | 'chat' | 'minhas_questoes';
+type StudyTab = 'flashcards' | 'revisar' | 'quiz' | 'chat' | 'minhas_questoes';
 
 function getAllCards(project: Project): ProjectCard[] {
   if (project.materiais?.length) {
@@ -41,19 +53,15 @@ function getAllCards(project: Project): ProjectCard[] {
 
 type ResumoBlock = { materialId: string; nomeArquivo: string; resumo: string };
 
-function getDisplayResumo(m: Material): string {
-  return m.resumoBreve ?? m.resumoMedio ?? m.resumoCompleto ?? m.resumo ?? '';
-}
-
-function getResumosWithMaterial(project: Project): ResumoBlock[] {
+function getResumosWithMaterial(project: Project, nivelResumo: UserPreferences['nivelResumo']): ResumoBlock[] {
   if (project.materiais?.length) {
     return project.materiais
-      .filter((m) => getDisplayResumo(m))
       .map((m) => ({
         materialId: m.id,
         nomeArquivo: m.nomeArquivo ?? 'PDF',
-        resumo: getDisplayResumo(m),
-      }));
+        resumo: getDisplayResumoFromPrefs(m, nivelResumo),
+      }))
+      .filter((b) => b.resumo.trim());
   }
   if (project.resumo) {
     return [{ materialId: 'legacy', nomeArquivo: 'PDF', resumo: project.resumo }];
@@ -104,13 +112,23 @@ export default function EstudarScreen() {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const spacingScale = useSpacingScale();
+  const contrastLevel = useContrastLevel();
+  const borderW = contrastLevel === 'alto' ? 2 : 1;
+  const prefsContext = usePreferencesContext();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [revisarCardIndex, setRevisarCardIndex] = useState(0);
+  const [revisarFlipped, setRevisarFlipped] = useState(false);
+  const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [activeTab, setActiveTab] = useState<StudyTab>('flashcards');
+  const [modoFoco, setModoFoco] = useState(false);
+  const [showSessionReminder, setShowSessionReminder] = useState(false);
+  const [pomodoroBreak, setPomodoroBreak] = useState<{ active: boolean; secondsLeft: number }>({ active: false, secondsLeft: 0 });
   const [editResumoMaterialId, setEditResumoMaterialId] = useState<string | null>(null);
   const [editResumoValue, setEditResumoValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -167,6 +185,36 @@ export default function EstudarScreen() {
     const unsub = loadProject();
     return () => unsub?.();
   }, [loadProject]);
+
+  useEffect(() => {
+    getPreferences().then((p) => {
+      setPrefs(p);
+      setActiveTab(getPreferredStudyTab(p) as StudyTab);
+      setModoFoco(p.modoFoco);
+    });
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      prefsContext?.refresh();
+    }, [prefsContext])
+  );
+
+  useEffect(() => {
+    if (!project) return;
+    const due = getAllCards(project).filter((c) => isCardDueForReview(c));
+    if (due.length > 0 && revisarCardIndex >= due.length) {
+      setRevisarCardIndex(Math.max(0, due.length - 1));
+    }
+  }, [project, revisarCardIndex]);
+
+  useEffect(() => {
+    if (!pomodoroBreak.active || pomodoroBreak.secondsLeft <= 0) return;
+    const t = setInterval(() => {
+      setPomodoroBreak((prev) => (prev.secondsLeft <= 1 ? { active: false, secondsLeft: 0 } : { ...prev, secondsLeft: prev.secondsLeft - 1 }));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [pomodoroBreak.active, pomodoroBreak.secondsLeft]);
 
   const handleSaveResumo = async () => {
     if (!id || !project || !editResumoMaterialId) return;
@@ -280,17 +328,24 @@ export default function EstudarScreen() {
   }
 
   const cards = getAllCards(project);
-  const resumosWithMaterial = getResumosWithMaterial(project);
+  const nivelResumo = prefs?.nivelResumo ?? 'medio';
+  const resumosWithMaterial = getResumosWithMaterial(project, nivelResumo);
   const cardsWithSource = getCardsWithSource(project);
   const materiais = getMateriais(project);
   const totalMin = Math.max(5, cards.length * 3);
+  const sessionDuration = prefs ? getSessionDuration(prefs) : { minutes: 28, label: '25-30 min' };
+  const effectiveMinutes = Math.min(sessionDuration.minutes, totalMin);
+  const effectiveLabel = effectiveMinutes < sessionDuration.minutes ? `${effectiveMinutes} min` : sessionDuration.label;
 
   const tabs: { key: StudyTab; label: string; icon: keyof typeof Feather.glyphMap }[] = [
     { key: 'flashcards', label: 'Flashcards', icon: 'layers' },
+    { key: 'revisar', label: 'Revisar', icon: 'refresh-cw' },
     { key: 'quiz', label: 'Quiz', icon: 'help-circle' },
     { key: 'chat', label: 'Chat IA', icon: 'message-circle' },
     { key: 'minhas_questoes', label: 'Minhas flashcards', icon: 'file-text' },
   ];
+
+  const cardsDue = cards.filter((c) => isCardDueForReview(c));
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -298,31 +353,96 @@ export default function EstudarScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 24 },
+          {
+            paddingHorizontal: 16 * spacingScale,
+            paddingBottom: (insets.bottom + 24) * spacingScale,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          style={styles.backRow}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
-          <ThemedText style={[styles.backText, { color: colors.mutedForeground }]}>
-            Voltar ao projeto
-          </ThemedText>
-        </TouchableOpacity>
+        {!modoFoco && (
+          <TouchableOpacity
+            style={[styles.backRow, { marginBottom: 16 * spacingScale, gap: 8 * spacingScale }]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
+            <ThemedText style={[styles.backText, { color: colors.mutedForeground }]}>
+              Voltar ao projeto
+            </ThemedText>
+          </TouchableOpacity>
+        )}
 
         <ThemedText style={styles.title}>
           Estudar: {project.title}
         </ThemedText>
-        <ThemedText style={[styles.meta, { color: colors.mutedForeground }]}>
-          ~{totalMin} min · {cards.length} card{cards.length !== 1 ? 's' : ''}
-        </ThemedText>
+        {!modoFoco && (
+          <View style={styles.titleRow}>
+            <ThemedText style={[styles.meta, { color: colors.mutedForeground }]}>
+              ~{totalMin} min · {cards.length} card{cards.length !== 1 ? 's' : ''}
+              {prefs && ` · Duração sugerida: ${effectiveLabel}`}
+            </ThemedText>
+          </View>
+        )}
+        {showSessionReminder && !pomodoroBreak.active && (
+          <View style={[styles.reminderBanner, { backgroundColor: colors.primary + '20', borderColor: colors.primary + '50', borderWidth: borderW, marginBottom: 16 * spacingScale, gap: 8 * spacingScale, padding: 12 * spacingScale }]}>
+            <Feather name="clock" size={18} color={colors.primary} />
+            <ThemedText style={[styles.reminderText, { color: colors.primary }]}>
+              Você está estudando há um tempo. Que tal uma pausa?
+            </ThemedText>
+          </View>
+        )}
+        {pomodoroBreak.active && (
+          <View style={[styles.pomodoroBlock, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40', borderWidth: borderW, marginBottom: 16 * spacingScale, padding: 20 * spacingScale }]}>
+            {pomodoroBreak.secondsLeft > 0 ? (
+              <>
+                <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground }]}>Pausa de 5 min</ThemedText>
+                <ThemedText style={styles.pomodoroTime}>
+                  {String(Math.floor(pomodoroBreak.secondsLeft / 60)).padStart(2, '0')}:{String(pomodoroBreak.secondsLeft % 60).padStart(2, '0')}
+                </ThemedText>
+              </>
+            ) : (
+              <>
+                <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground }]}>Pausa concluída.</ThemedText>
+                <Button onPress={() => { setPomodoroBreak({ active: false, secondsLeft: 0 }); setShowSessionReminder(true); }}>
+                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Voltar ao estudo</ThemedText>
+                </Button>
+              </>
+            )}
+          </View>
+        )}
+        {prefs && !pomodoroBreak.active && (
+          <View style={[styles.timerRow, styles.timerAndFocoRow, { marginBottom: 16 * spacingScale, gap: 12 * spacingScale }]}>
+            <StudyTimer
+              initialMinutes={effectiveMinutes}
+              onComplete={() => {
+                if (prefs.alertasTempo) {
+                  Alert.alert('Tempo de sessão', 'Você está estudando há um tempo. Que tal uma pausa?');
+                }
+                if (prefs.pausasPomodoro) setPomodoroBreak({ active: true, secondsLeft: 5 * 60 });
+                else setShowSessionReminder(true);
+              }}
+            />
+            <Button
+              variant="outline"
+              onPress={async () => {
+                const next = !modoFoco;
+                setModoFoco(next);
+                await setPreferences({ modoFoco: next });
+              }}
+              style={styles.focoBtn}
+            >
+              <Feather name="target" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+              <ThemedText style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>
+                {modoFoco ? 'Sair do modo foco' : 'Modo foco'}
+              </ThemedText>
+            </Button>
+          </View>
+        )}
 
-        {/* Resumos */}
-        {resumosWithMaterial.length > 0 && (
-          <View style={[styles.resumosBlock, { borderColor: colors.border, backgroundColor: colors.muted + '40' }]}>
+        {/* Resumos - oculto no modo foco */}
+        {!modoFoco && resumosWithMaterial.length > 0 && (
+          <View style={[styles.resumosBlock, { borderColor: colors.border, borderWidth: borderW, backgroundColor: colors.muted + '40', padding: 16 * spacingScale, marginBottom: 20 * spacingScale }]}>
             <ThemedText style={[styles.resumosTitle, { color: colors.mutedForeground }]}>
               Resumo do projeto
             </ThemedText>
@@ -348,8 +468,9 @@ export default function EstudarScreen() {
           </View>
         )}
 
-        {/* Tabs */}
-        <View style={[styles.tabStrip, { backgroundColor: colors.muted + '80' }]}>
+        {/* Tabs - ocultas no modo foco */}
+        {!modoFoco && (
+        <View style={[styles.tabStrip, { backgroundColor: colors.muted + '80', gap: 4 * spacingScale, padding: 4 * spacingScale, marginBottom: 20 * spacingScale }]}>
           {tabs.map((t) => (
             <TouchableOpacity
               key={t.key}
@@ -377,8 +498,40 @@ export default function EstudarScreen() {
             </TouchableOpacity>
           ))}
         </View>
+        )}
 
         {/* Tab content */}
+        {activeTab === 'revisar' && cardsDue.length === 0 && (
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: borderW, padding: 24 * spacingScale, gap: 16 * spacingScale }]}>
+            <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              Nenhum card para revisar hoje. Todos em dia!
+            </ThemedText>
+            <ThemedText style={[styles.emptyText, { color: colors.mutedForeground, fontSize: 14 }]}>
+              Cards que você já classificou (Fácil, Médio, Difícil) na tela de Revisão aparecerão aqui quando estiverem na data de revisar.
+            </ThemedText>
+            <Button variant="outline" onPress={() => router.back()}>
+              Voltar ao projeto
+            </Button>
+          </View>
+        )}
+        {activeTab === 'revisar' && cardsDue.length > 0 && (
+          <>
+            <FlashcardCarousel
+              cards={cardsDue}
+              cardIndex={revisarCardIndex}
+              onCardIndexChange={setRevisarCardIndex}
+              flipped={revisarFlipped}
+              onFlippedChange={setRevisarFlipped}
+              mode="project"
+              footerText={`${cardsDue.length} card${cardsDue.length !== 1 ? 's' : ''} para revisar · Clique para ver a resposta`}
+            />
+            <View style={[styles.backBtnWrap, { marginTop: 24 * spacingScale }]}>
+              <Button variant="outline" onPress={() => router.back()}>
+                Voltar ao projeto
+              </Button>
+            </View>
+          </>
+        )}
         {activeTab === 'quiz' && (
           <StudyQuizPanel
             cards={cards}
@@ -403,7 +556,7 @@ export default function EstudarScreen() {
           />
         )}
         {activeTab === 'flashcards' && cards.length === 0 && (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: borderW, padding: 24 * spacingScale, gap: 16 * spacingScale }]}>
             <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
               Nenhum card para estudar. Adicione PDFs ao projeto para gerar cards.
             </ThemedText>
@@ -422,7 +575,7 @@ export default function EstudarScreen() {
               onFlippedChange={setFlipped}
               mode="project"
             />
-            <View style={styles.backBtnWrap}>
+            <View style={[styles.backBtnWrap, { marginTop: 24 * spacingScale }]}>
               <Button variant="outline" onPress={() => router.back()}>
                 Voltar ao projeto
               </Button>
@@ -467,7 +620,30 @@ const styles = StyleSheet.create({
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   backText: { fontSize: 14 },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
-  meta: { fontSize: 14, marginBottom: 20 },
+  titleRow: { marginBottom: 8 },
+  meta: { fontSize: 14 },
+  timerRow: { marginBottom: 16 },
+  timerAndFocoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  focoBtn: { alignSelf: 'flex-start' },
+  reminderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  reminderText: { fontSize: 14, fontWeight: '500' },
+  pomodoroBlock: {
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pomodoroTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  pomodoroTime: { fontVariant: ['tabular-nums'], fontSize: 24, fontWeight: '700' },
   notFoundText: { marginBottom: 16, textAlign: 'center' },
   resumosBlock: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 20 },
   resumosTitle: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', marginBottom: 12 },
