@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   ScrollView,
   View,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
   Pressable,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,6 +72,59 @@ export default function ProjectDetailScreen() {
   const [editMaterialName, setEditMaterialName] = useState('');
   const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const menuAnchorRef = useRef<View>(null);
+  const overlayRef = useRef<View>(null);
+  const [menuAnchorLayout, setMenuAnchorLayout] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [overlayLayout, setOverlayLayout] = useState<{ x: number; y: number } | null>(null);
+
+  const projectMenuAnchorRef = useRef<View>(null);
+  const projectMenuOverlayRef = useRef<View>(null);
+  const [projectMenuAnchorLayout, setProjectMenuAnchorLayout] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [projectMenuOverlayLayout, setProjectMenuOverlayLayout] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!materialMenuId) {
+      setMenuAnchorLayout(null);
+      setOverlayLayout(null);
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      menuAnchorRef.current?.measureInWindow((x, y, w, h) => {
+        setMenuAnchorLayout({ x, y, w, h });
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [materialMenuId]);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      setProjectMenuAnchorLayout(null);
+      setProjectMenuOverlayLayout(null);
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      projectMenuAnchorRef.current?.measureInWindow((x, y, w, h) => {
+        setProjectMenuAnchorLayout({ x, y, w, h });
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [menuOpen]);
+
+  const measureOverlay = useCallback(() => {
+    requestAnimationFrame(() => {
+      overlayRef.current?.measureInWindow((x, y) => {
+        setOverlayLayout({ x, y });
+      });
+    });
+  }, []);
+
+  const measureProjectMenuOverlay = useCallback(() => {
+    requestAnimationFrame(() => {
+      projectMenuOverlayRef.current?.measureInWindow((x, y) => {
+        setProjectMenuOverlayLayout({ x, y });
+      });
+    });
+  }, []);
 
   const loadProject = useCallback(() => {
     if (!id) {
@@ -150,7 +203,11 @@ export default function ProjectDetailScreen() {
           ]
         : [];
 
-  const totalConcluidos = materials.filter((m) => (m.status ?? 'pending') === 'completed').length;
+  const getStatus = (m: Material): MaterialStatus => (m.status ?? 'pending') as MaterialStatus;
+  const paraEstudar = materials.filter((m) => getStatus(m) === 'pending');
+  const emProgresso = materials.filter((m) => getStatus(m) === 'in_progress');
+  const concluidos = materials.filter((m) => getStatus(m) === 'completed');
+  const totalConcluidos = concluidos.length;
 
   const handleSaveProjectTitle = useCallback(async () => {
     if (!project || !editTitle.trim()) return;
@@ -229,22 +286,27 @@ export default function ProjectDetailScreen() {
       if (!project) return;
       const db = getFirestoreDb();
       if (!db) return;
-      const updated = (project.materiais ?? []).map((m) => {
+      const materiais = project.materiais ?? [];
+      const updated: Material[] = materiais.map((m) => {
         if (m.id !== materialId) return m;
-        const next = { ...m, status: newStatus };
+        const base = { ...m, status: newStatus };
         if (newStatus === 'completed' && !m.nextReviewAt) {
-          next.nextReviewAt = getNextReviewDateFromLevel(0);
-          next.intervalLevel = 0;
+          return {
+            ...base,
+            nextReviewAt: getNextReviewDateFromLevel(0),
+            intervalLevel: 0,
+          };
         }
         if (newStatus !== 'completed') {
-          next.nextReviewAt = undefined;
-          next.lastReviewedAt = undefined;
-          next.intervalLevel = undefined;
+          const { nextReviewAt, lastReviewedAt, intervalLevel, ...rest } = base;
+          return rest as Material;
         }
-        return next;
+        return base;
       });
       const completedCount = updated.filter((m) => (m.status ?? 'pending') === 'completed').length;
       const progress = updated.length === 0 ? 0 : Math.round((completedCount / updated.length) * 100);
+      const prevMateriais = project.materiais;
+      const prevProgress = project.progress;
       setProject((p) => (p ? { ...p, materiais: updated, progress } : null));
       setMaterialMenuId(null);
       try {
@@ -254,10 +316,73 @@ export default function ProjectDetailScreen() {
           updatedAt: serverTimestamp(),
         });
       } catch {
-        setProject((p) => (p ? { ...p, materiais: project.materiais, progress: project.progress } : null));
+        setProject((p) => (p ? { ...p, materiais: prevMateriais, progress: prevProgress } : null));
       }
     },
     [project]
+  );
+
+  const renderMaterialCard = useCallback(
+    (m: Material) => {
+      const status = getStatus(m);
+      const isMenuOpen = materialMenuId === m.id;
+      return (
+        <View
+          key={m.id}
+          style={[styles.materialCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <TouchableOpacity
+            style={styles.materialContent}
+            onPress={() => router.push(`/project/${id}/material/${m.id}` as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.materialHeader}>
+              <ThemedText style={styles.materialTitle} numberOfLines={1}>
+                {m.nomeArquivo ?? 'Tópico'}
+              </ThemedText>
+              <View style={[styles.statusBadge, { backgroundColor: colors.muted }]}>
+                <ThemedText style={[styles.statusText, { color: colors.mutedForeground }]}>
+                  {STATUS_LABEL[status]}
+                </ThemedText>
+              </View>
+            </View>
+            <ThemedText style={[styles.materialMeta, { color: colors.mutedForeground }]}>
+              ~{estimateMin(m)} min · {m.cards?.length ?? 0} cards
+            </ThemedText>
+          </TouchableOpacity>
+          <View ref={isMenuOpen ? menuAnchorRef : undefined} style={styles.materialMenuWrap}>
+            <TouchableOpacity
+              style={styles.materialMenuBtn}
+              onPress={() => setMaterialMenuId(isMenuOpen ? null : m.id)}
+            >
+              <Feather name="more-vertical" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    },
+    [colors, materialMenuId, id, router]
+  );
+
+  const renderSection = useCallback(
+    (title: string, list: Material[]) => (
+      <View style={styles.categorySection} key={title}>
+        <ThemedText style={[styles.categorySectionTitle, { color: colors.mutedForeground }]}>
+          {title}
+          {list.length > 0 ? ` (${list.length})` : ''}
+        </ThemedText>
+        <View style={styles.categorySectionList}>
+          {list.length === 0 ? (
+            <ThemedText style={[styles.categorySectionEmpty, { color: colors.mutedForeground }]}>
+              Nenhum tópico
+            </ThemedText>
+          ) : (
+            list.map((m) => renderMaterialCard(m))
+          )}
+        </View>
+      </View>
+    ),
+    [colors, renderMaterialCard]
   );
 
   if (loading) {
@@ -286,99 +411,79 @@ export default function ProjectDetailScreen() {
     );
   }
 
+  const listHeader = (
+    <>
+      <TouchableOpacity
+        style={styles.backRow}
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+      >
+        <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
+        <ThemedText style={[styles.backText, { color: colors.mutedForeground }]}>
+          Voltar para a Biblioteca
+        </ThemedText>
+      </TouchableOpacity>
+
+      <View style={styles.header}>
+        <View style={styles.headerMain}>
+          <View style={[styles.emojiWrap, { backgroundColor: colors.primary + '20' }]}>
+            <ThemedText style={styles.emoji}>{project.emoji}</ThemedText>
+          </View>
+          <View style={styles.headerText}>
+            <ThemedText style={styles.title} numberOfLines={1}>
+              {project.title}
+            </ThemedText>
+            <ThemedText style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              {materials.length} tópico{materials.length !== 1 ? 's' : ''} · {totalConcluidos} concluído{totalConcluidos !== 1 ? 's' : ''}
+            </ThemedText>
+          </View>
+        </View>
+        <View ref={menuOpen ? projectMenuAnchorRef : undefined} style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.menuBtn}
+            onPress={() => setMenuOpen((o) => !o)}
+          >
+            <Feather name="more-vertical" size={22} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.buttonsRow}>
+        <Button
+          variant="outline"
+          onPress={() => router.push(`/project/${id}/add-pdf` as any)}
+          style={styles.headerBtn}
+        >
+          <Feather name="plus" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+          <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Adicionar PDF</ThemedText>
+        </Button>
+        <Button
+          onPress={() => router.push(`/project/${id}/estudar` as any)}
+          style={styles.headerBtn}
+        >
+          <Feather name="bookmark" size={18} color={colors.primaryForeground} style={{ marginRight: 6 }} />
+          <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Estudar todos</ThemedText>
+        </Button>
+      </View>
+
+      <ThemedText style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+        Tópicos
+      </ThemedText>
+    </>
+  );
+
   return (
     <ThemedView style={styles.container}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <TouchableOpacity
-          style={styles.backRow}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
+      {materials.length === 0 ? (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+          ]}
+          showsVerticalScrollIndicator={false}
         >
-          <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
-          <ThemedText style={[styles.backText, { color: colors.mutedForeground }]}>
-            Voltar para a Biblioteca
-          </ThemedText>
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <View style={styles.headerMain}>
-            <View style={[styles.emojiWrap, { backgroundColor: colors.primary + '20' }]}>
-              <ThemedText style={styles.emoji}>{project.emoji}</ThemedText>
-            </View>
-            <View style={styles.headerText}>
-              <ThemedText style={styles.title} numberOfLines={1}>
-                {project.title}
-              </ThemedText>
-              <ThemedText style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                {materials.length} tópico{materials.length !== 1 ? 's' : ''} · {totalConcluidos} concluído{totalConcluidos !== 1 ? 's' : ''}
-              </ThemedText>
-            </View>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.menuBtn}
-              onPress={() => setMenuOpen((o) => !o)}
-            >
-              <Feather name="more-vertical" size={22} color={colors.mutedForeground} />
-            </TouchableOpacity>
-            {menuOpen && (
-              <View style={[styles.menuDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => {
-                    setEditTitle(project.title);
-                    setShowEditProject(true);
-                    setMenuOpen(false);
-                  }}
-                >
-                  <Feather name="edit-2" size={16} color={colors.foreground} />
-                  <ThemedText style={styles.menuItemText}>Editar nome</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => {
-                    setShowDeleteProject(true);
-                    setMenuOpen(false);
-                  }}
-                >
-                  <Feather name="trash-2" size={16} color={colors.destructive} />
-                  <ThemedText style={[styles.menuItemText, { color: colors.destructive }]}>Excluir projeto</ThemedText>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.buttonsRow}>
-          <Button
-            variant="outline"
-            onPress={() => router.push(`/project/${id}/add-pdf` as any)}
-            style={styles.headerBtn}
-          >
-            <Feather name="plus" size={18} color={colors.primary} style={{ marginRight: 6 }} />
-            <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Adicionar PDF</ThemedText>
-          </Button>
-          <Button
-            onPress={() => router.push(`/project/${id}/estudar` as any)}
-            style={styles.headerBtn}
-          >
-            <Feather name="bookmark" size={18} color={colors.primaryForeground} style={{ marginRight: 6 }} />
-            <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Estudar todos</ThemedText>
-          </Button>
-        </View>
-
-        <ThemedText style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-          Tópicos
-        </ThemedText>
-
-        {materials.length === 0 ? (
+          {listHeader}
           <View style={[styles.emptyMaterials, { borderColor: colors.border }]}>
             <ThemedText style={[styles.emptyMaterialsText, { color: colors.mutedForeground }]}>
               Nenhum tópico ainda. Use &quot;Adicionar PDF&quot; para enviar o primeiro.
@@ -387,94 +492,146 @@ export default function ProjectDetailScreen() {
               <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Adicionar PDF</ThemedText>
             </Button>
           </View>
-        ) : (
-          <View style={styles.materialList}>
-            {materials.map((m) => {
-              const status = (m.status ?? 'pending') as MaterialStatus;
-              const isMenuOpen = materialMenuId === m.id;
+        </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {listHeader}
+          {renderSection('Para estudar', paraEstudar)}
+          {renderSection('Em progresso', emProgresso)}
+          {renderSection('Concluído', concluidos)}
+        </ScrollView>
+      )}
+
+      {/* Overlay: menu do projeto (três pontinhos do cabeçalho) */}
+      {menuOpen && projectMenuAnchorLayout && (
+        <View ref={projectMenuOverlayRef} style={styles.modalOverlay} pointerEvents="box-none" onLayout={measureProjectMenuOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setMenuOpen(false)}>
+            {projectMenuOverlayLayout && (() => {
+              const dropdownWidth = 160;
+              const left = Math.min(
+                projectMenuAnchorLayout.x + projectMenuAnchorLayout.w - dropdownWidth - projectMenuOverlayLayout.x,
+                Dimensions.get('window').width - dropdownWidth - projectMenuOverlayLayout.x - 16
+              );
+              const top = projectMenuAnchorLayout.y + projectMenuAnchorLayout.h - projectMenuOverlayLayout.y;
               return (
                 <View
-                  key={m.id}
-                  style={[styles.materialCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  style={[
+                    styles.menuDropdownOverlay,
+                    { left, top, backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                  onStartShouldSetResponder={() => true}
                 >
                   <TouchableOpacity
-                    style={styles.materialContent}
-                    onPress={() => router.push(`/project/${id}/material/${m.id}` as any)}
-                    activeOpacity={0.8}
+                    style={styles.menuItem}
+                    onPress={() => {
+                      setEditTitle(project.title);
+                      setShowEditProject(true);
+                      setMenuOpen(false);
+                    }}
                   >
-                    <View style={styles.materialHeader}>
-                      <ThemedText style={styles.materialTitle} numberOfLines={1}>
-                        {m.nomeArquivo ?? 'Tópico'}
-                      </ThemedText>
-                      <View style={[styles.statusBadge, { backgroundColor: colors.muted }]}>
-                        <ThemedText style={[styles.statusText, { color: colors.mutedForeground }]}>
-                          {STATUS_LABEL[status]}
-                        </ThemedText>
-                      </View>
-                    </View>
-                    <ThemedText style={[styles.materialMeta, { color: colors.mutedForeground }]}>
-                      ~{estimateMin(m)} min · {m.cards?.length ?? 0} cards
-                    </ThemedText>
+                    <Feather name="edit-2" size={16} color={colors.foreground} />
+                    <ThemedText style={styles.menuItemText}>Editar nome</ThemedText>
                   </TouchableOpacity>
-                  <View style={styles.materialMenuWrap}>
-                    <TouchableOpacity
-                      style={styles.materialMenuBtn}
-                      onPress={() => setMaterialMenuId(isMenuOpen ? null : m.id)}
-                    >
-                      <Feather name="more-vertical" size={18} color={colors.mutedForeground} />
-                    </TouchableOpacity>
-                    {isMenuOpen && (
-                      <View style={[styles.materialMenuDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <TouchableOpacity
-                          style={styles.menuItem}
-                          onPress={() => {
-                            setEditMaterial(m);
-                            setEditMaterialName(m.nomeArquivo ?? '');
-                            setMaterialMenuId(null);
-                          }}
-                        >
-                          <Feather name="edit-2" size={16} color={colors.foreground} />
-                          <ThemedText style={styles.menuItemText}>Editar nome</ThemedText>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.menuItem}
-                          onPress={() => {
-                            setDeleteMaterialId(m.id);
-                            setMaterialMenuId(null);
-                          }}
-                        >
-                          <Feather name="trash-2" size={16} color={colors.destructive} />
-                          <ThemedText style={[styles.menuItemText, { color: colors.destructive }]}>Excluir</ThemedText>
-                        </TouchableOpacity>
-                        <View style={styles.statusSection}>
-                          <ThemedText style={[styles.statusSectionLabel, { color: colors.mutedForeground }]}>Mover para</ThemedText>
-                          {(['pending', 'in_progress', 'completed'] as const)
-                            .filter((s) => s !== status)
-                            .map((s) => (
-                              <TouchableOpacity
-                                key={s}
-                                style={styles.statusOption}
-                                onPress={() => handleMoveMaterialStatus(m.id, s)}
-                              >
-                                <ThemedText style={styles.menuItemText}>{STATUS_LABEL[s]}</ThemedText>
-                              </TouchableOpacity>
-                            ))}
-                        </View>
-                      </View>
-                    )}
-                  </View>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                      setShowDeleteProject(true);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <Feather name="trash-2" size={16} color={colors.destructive} />
+                    <ThemedText style={[styles.menuItemText, { color: colors.destructive }]}>Excluir projeto</ThemedText>
+                  </TouchableOpacity>
                 </View>
               );
-            })}
-          </View>
-        )}
-      </ScrollView>
+            })()}
+          </Pressable>
+        </View>
+      )}
 
-      {/* Modal: Editar nome do projeto */}
-      <Modal visible={showEditProject} transparent animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => !saving && setShowEditProject(false)}>
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
-            <ThemedText style={styles.modalTitle}>Editar projeto</ThemedText>
+      {/* Overlay: menu do tópico (dropdown fora do ScrollView para ficar por cima dos botões) */}
+      {materialMenuId && menuAnchorLayout && (() => {
+        const m = materials.find((mat) => mat.id === materialMenuId);
+        if (!m) return null;
+        const status = (m.status ?? 'pending') as MaterialStatus;
+        const { width: screenWidth } = Dimensions.get('window');
+        const dropdownWidth = 180;
+        const left = overlayLayout
+          ? Math.min(
+              menuAnchorLayout.x + menuAnchorLayout.w - dropdownWidth - overlayLayout.x,
+              screenWidth - dropdownWidth - overlayLayout.x - 16
+            )
+          : 0;
+        const top = overlayLayout ? menuAnchorLayout.y + menuAnchorLayout.h - overlayLayout.y : 0;
+        return (
+          <View ref={overlayRef} style={styles.modalOverlay} pointerEvents="box-none" onLayout={measureOverlay}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setMaterialMenuId(null)}>
+              {overlayLayout && (
+              <Pressable
+                style={[
+                  styles.materialMenuDropdownOverlay,
+                  { left, top, backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+                onPress={() => {}}
+              >
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setEditMaterial(m);
+                    setEditMaterialName(m.nomeArquivo ?? '');
+                    setMaterialMenuId(null);
+                  }}
+                >
+                  <Feather name="edit-2" size={16} color={colors.foreground} />
+                  <ThemedText style={styles.menuItemText}>Editar nome</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setDeleteMaterialId(m.id);
+                    setMaterialMenuId(null);
+                  }}
+                >
+                  <Feather name="trash-2" size={16} color={colors.destructive} />
+                  <ThemedText style={[styles.menuItemText, { color: colors.destructive }]}>Excluir</ThemedText>
+                </TouchableOpacity>
+                <View style={styles.statusSection}>
+                  <ThemedText style={[styles.statusSectionLabel, { color: colors.mutedForeground }]}>Mover para</ThemedText>
+                  {(['pending', 'in_progress', 'completed'] as const)
+                    .filter((s) => s !== status)
+                    .map((s) => (
+                      <TouchableOpacity
+                        key={s}
+                        style={styles.statusOption}
+                        onPress={() => {
+                          handleMoveMaterialStatus(m.id, s);
+                          setMaterialMenuId(null);
+                        }}
+                      >
+                        <ThemedText style={styles.menuItemText}>{STATUS_LABEL[s]}</ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </Pressable>
+              )}
+            </Pressable>
+          </View>
+        );
+      })()}
+
+      {/* Overlay: Editar nome do projeto */}
+      {showEditProject && (
+        <View style={styles.modalOverlay} pointerEvents="box-none">
+          <Pressable style={styles.modalBackdrop} onPress={() => !saving && setShowEditProject(false)}>
+            <Pressable style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+              <ThemedText style={styles.modalTitle}>Editar projeto</ThemedText>
             <Input
               value={editTitle}
               onChangeText={setEditTitle}
@@ -489,15 +646,16 @@ export default function ProjectDetailScreen() {
                 {saving ? <ActivityIndicator size="small" color={colors.primaryForeground} /> : <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Salvar</ThemedText>}
               </Button>
             </View>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      )}
 
-      {/* Modal: Excluir projeto */}
-      <Modal visible={showDeleteProject} transparent animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => !saving && setShowDeleteProject(false)}>
-          <Pressable style={[styles.modalBox, styles.modalBoxSm, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
-            <ThemedText style={styles.modalTitle}>Excluir projeto?</ThemedText>
+      {showDeleteProject && (
+        <View style={styles.modalOverlay} pointerEvents="box-none">
+          <Pressable style={styles.modalBackdrop} onPress={() => !saving && setShowDeleteProject(false)}>
+            <Pressable style={[styles.modalBox, styles.modalBoxSm, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+              <ThemedText style={styles.modalTitle}>Excluir projeto?</ThemedText>
             <ThemedText style={[styles.modalBody, { color: colors.mutedForeground }]}>
               Esta ação não pode ser desfeita. Todos os materiais e cards serão removidos.
             </ThemedText>
@@ -509,15 +667,16 @@ export default function ProjectDetailScreen() {
                 {saving ? <ActivityIndicator size="small" color={colors.destructiveForeground} /> : <ThemedText style={{ color: colors.destructiveForeground, fontWeight: '600' }}>Excluir</ThemedText>}
               </Button>
             </View>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      )}
 
-      {/* Modal: Editar nome do tópico */}
-      <Modal visible={!!editMaterial} transparent animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => !saving && setEditMaterial(null)}>
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
-            <ThemedText style={styles.modalTitle}>Editar nome do tópico</ThemedText>
+      {!!editMaterial && (
+        <View style={styles.modalOverlay} pointerEvents="box-none">
+          <Pressable style={styles.modalBackdrop} onPress={() => !saving && setEditMaterial(null)}>
+            <Pressable style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+              <ThemedText style={styles.modalTitle}>Editar nome do tópico</ThemedText>
             <Input
               value={editMaterialName}
               onChangeText={setEditMaterialName}
@@ -532,15 +691,16 @@ export default function ProjectDetailScreen() {
                 {saving ? <ActivityIndicator size="small" color={colors.primaryForeground} /> : <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Salvar</ThemedText>}
               </Button>
             </View>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      )}
 
-      {/* Modal: Excluir tópico */}
-      <Modal visible={!!deleteMaterialId} transparent animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => !saving && setDeleteMaterialId(null)}>
-          <Pressable style={[styles.modalBox, styles.modalBoxSm, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
-            <ThemedText style={styles.modalTitle}>Excluir este tópico?</ThemedText>
+      {!!deleteMaterialId && (
+        <View style={styles.modalOverlay} pointerEvents="box-none">
+          <Pressable style={styles.modalBackdrop} onPress={() => !saving && setDeleteMaterialId(null)}>
+            <Pressable style={[styles.modalBox, styles.modalBoxSm, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+              <ThemedText style={styles.modalTitle}>Excluir este tópico?</ThemedText>
             <ThemedText style={[styles.modalBody, { color: colors.mutedForeground }]}>
               O PDF e os cards deste tópico serão removidos do projeto.
             </ThemedText>
@@ -552,9 +712,10 @@ export default function ProjectDetailScreen() {
                 {saving ? <ActivityIndicator size="small" color={colors.destructiveForeground} /> : <ThemedText style={{ color: colors.destructiveForeground, fontWeight: '600' }}>Excluir</ThemedText>}
               </Button>
             </View>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      )}
     </ThemedView>
   );
 }
@@ -575,10 +736,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, marginTop: 4 },
   headerActions: { position: 'relative' },
   menuBtn: { padding: 8 },
-  menuDropdown: {
+  menuDropdownOverlay: {
     position: 'absolute',
-    right: 0,
-    top: 40,
     minWidth: 160,
     borderRadius: 8,
     borderWidth: 1,
@@ -587,13 +746,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 10000,
   },
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12 },
   menuItemText: { fontSize: 14 },
   buttonsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   headerBtn: { flex: 1, minWidth: 140 },
   sectionLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', marginBottom: 12 },
+  categorySection: { marginBottom: 24 },
+  categorySectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  categorySectionList: { gap: 10 },
+  categorySectionEmpty: { fontSize: 12, paddingVertical: 12, paddingHorizontal: 4 },
   emptyMaterials: {
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -618,10 +787,8 @@ const styles = StyleSheet.create({
   materialMeta: { fontSize: 12 },
   materialMenuWrap: { position: 'relative' },
   materialMenuBtn: { padding: 16 },
-  materialMenuDropdown: {
+  materialMenuDropdownOverlay: {
     position: 'absolute',
-    right: 0,
-    top: 48,
     minWidth: 180,
     borderRadius: 8,
     borderWidth: 1,
@@ -630,15 +797,40 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 10000,
   },
   statusSection: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 4, marginTop: 4 },
   statusSectionLabel: { fontSize: 11, marginBottom: 4, paddingHorizontal: 12 },
   statusOption: { paddingVertical: 8, paddingHorizontal: 12 },
   emptyState: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center', gap: 16 },
   emptyText: { textAlign: 'center', marginBottom: 8 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  modalBox: { width: '100%', maxWidth: 400, borderRadius: 12, borderWidth: 1, padding: 24 },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 99999,
+    elevation: 99999,
+    backgroundColor: 'transparent',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalBox: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 24,
+    elevation: 100000,
+  },
   modalBoxSm: { maxWidth: 360 },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
   modalBody: { fontSize: 14, marginBottom: 20 },
