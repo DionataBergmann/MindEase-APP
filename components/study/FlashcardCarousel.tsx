@@ -23,6 +23,8 @@ export type FlashcardCarouselProps = {
   flipped: boolean;
   onFlippedChange: (flipped: boolean) => void;
   mode: FlashcardCarouselMode;
+  renderActions?: (params: { flipped: boolean }) => React.ReactNode;
+  footerText?: string;
 };
 
 const FLIP_DURATION = 400;
@@ -35,6 +37,8 @@ export function FlashcardCarousel({
   flipped,
   onFlippedChange,
   mode,
+  renderActions,
+  footerText: footerTextProp,
 }: FlashcardCarouselProps) {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
@@ -74,12 +78,13 @@ export function FlashcardCarousel({
     onCardIndexChange(cardIndex + 1);
   };
 
-  const footerText =
+  const defaultFooterText =
     mode === 'material'
       ? flipped
         ? 'Próximo ou Anterior para navegar.'
         : 'Clique para ver a resposta'
       : 'Clique para ver a resposta';
+  const footerText = footerTextProp ?? defaultFooterText;
 
   const slideAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideOffset.value }],
@@ -131,26 +136,30 @@ export function FlashcardCarousel({
         {footerText} · {cardIndex + 1}/{cards.length}
       </ThemedText>
 
-      <View style={styles.buttons}>
-        <Button
-          variant="outline"
-          onPress={handlePrev}
-          disabled={!hasPrev}
-          style={styles.btn}
-        >
-          <Feather name="chevron-left" size={18} color={colors.primary} />
-          <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Anterior</ThemedText>
-        </Button>
-        <Button
-          variant="outline"
-          onPress={handleNext}
-          disabled={!hasNext}
-          style={styles.btn}
-        >
-          <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Próximo</ThemedText>
-          <Feather name="chevron-right" size={18} color={colors.primary} />
-        </Button>
-      </View>
+      {renderActions ? (
+        <View style={styles.buttons}>{renderActions({ flipped })}</View>
+      ) : (
+        <View style={styles.buttons}>
+          <Button
+            variant="outline"
+            onPress={handlePrev}
+            disabled={!hasPrev}
+            style={styles.btn}
+          >
+            <Feather name="chevron-left" size={18} color={colors.primary} />
+            <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Anterior</ThemedText>
+          </Button>
+          <Button
+            variant="outline"
+            onPress={handleNext}
+            disabled={!hasNext}
+            style={styles.btn}
+          >
+            <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Próximo</ThemedText>
+            <Feather name="chevron-right" size={18} color={colors.primary} />
+          </Button>
+        </View>
+      )}
     </View>
   );
 }
