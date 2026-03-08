@@ -54,12 +54,12 @@ export function Button({
 
   return (
     <Pressable
-      style={({ pressed, hovered }) => [
+      style={({ pressed }) => [
         styles.base,
         variantStyles[variant],
         pressed && styles.pressed,
         disabled && styles.disabled,
-        typeof style === "function" ? style({ pressed, hovered: hovered ?? false }) : style,
+        typeof style === "function" ? style({ pressed }) : style,
       ]}
       disabled={disabled || loading}
       {...rest}
