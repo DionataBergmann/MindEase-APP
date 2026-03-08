@@ -59,7 +59,9 @@ export function ProcessedResultsList({
               {result.resumo}
             </ThemedText>
             <ThemedText style={[styles.cardsCount, { color: colors.mutedForeground }]}>
-              {result.cards.length} card(s)
+              {result.flashcards && result.flashcards.length > 0
+                ? `${result.cards.length} questão(s) (quiz) · ${result.flashcards.length} flashcard(s)`
+                : `${result.cards.length} card(s)`}
             </ThemedText>
           </View>
         ))}

@@ -51,7 +51,8 @@ import {
 type StudyTab = "flashcards" | "quiz" | "chat" | "minhas_questoes";
 
 function estimateMin(m: Material): number {
-  return Math.max(5, (m.cards?.length ?? 0) * 3);
+  const count = m.flashcards?.length ?? m.cards?.length ?? 0;
+  return Math.max(5, count * 3);
 }
 
 export default function MaterialStudyScreen() {
@@ -115,13 +116,14 @@ export default function MaterialStudyScreen() {
         const d = snap.data()!;
         const materiais: Material[] = Array.isArray(d.materiais)
           ? d.materiais
-          : d.resumo || d.cards?.length > 0
+          : d.resumo || (d.cards as unknown[])?.length > 0 || (d.flashcards as unknown[])?.length > 0
             ? [
                 {
                   id: "legacy",
                   nomeArquivo: "PDF",
                   resumo: d.resumo ?? "",
-                  cards: d.cards ?? [],
+                  cards: (d.cards as ProjectCard[]) ?? [],
+                  flashcards: (d.flashcards as Material["flashcards"]) ?? undefined,
                 },
               ]
             : [];
@@ -279,28 +281,55 @@ export default function MaterialStudyScreen() {
     if (!projectId || !materialId || !project?.materiais || !material) return;
     const db = getFirestoreDb();
     if (!db) return;
-    let newCards: ProjectCard[];
-    if (opts.mode === "new") {
-      newCards = [...(material.cards ?? []), { titulo: opts.titulo, conteudo: opts.conteudo }];
-    } else if (opts.mode === "edit" && typeof opts.index === "number") {
-      const prev = material.cards ?? [];
-      newCards = prev.map((c, i) =>
-        i === opts.index ? { ...c, titulo: opts.titulo, conteudo: opts.conteudo } : c
+    const useFlashcardsHere = Boolean(material.flashcards && material.flashcards.length > 0);
+    if (useFlashcardsHere) {
+      const prev = material.flashcards ?? [];
+      let newFlashcards: Array<{ titulo: string; conteudo: string }>;
+      if (opts.mode === "new") {
+        newFlashcards = [...prev, { titulo: opts.titulo, conteudo: opts.conteudo }];
+      } else if (opts.mode === "edit" && typeof opts.index === "number") {
+        newFlashcards = prev.map((f, i) =>
+          i === opts.index ? { titulo: opts.titulo, conteudo: opts.conteudo } : f
+        );
+      } else return;
+      const updated = project.materiais.map((m) =>
+        m.id === materialId ? { ...m, flashcards: newFlashcards } : m
       );
-    } else return;
-    const updated = project.materiais.map((m) =>
-      m.id === materialId ? { ...m, cards: newCards } : m
-    );
-    setSaving(true);
-    try {
-      await updateDoc(doc(db, "projects", projectId), {
-        materiais: updated,
-        updatedAt: serverTimestamp(),
-      });
-      setMaterial((m) => (m ? { ...m, cards: newCards } : null));
-      setProject((p) => (p ? { ...p, materiais: updated } : null));
-    } finally {
-      setSaving(false);
+      setSaving(true);
+      try {
+        await updateDoc(doc(db, "projects", projectId), {
+          materiais: updated,
+          updatedAt: serverTimestamp(),
+        });
+        setMaterial((m) => (m ? { ...m, flashcards: newFlashcards } : null));
+        setProject((p) => (p ? { ...p, materiais: updated } : null));
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      let newCards: ProjectCard[];
+      if (opts.mode === "new") {
+        newCards = [...(material.cards ?? []), { titulo: opts.titulo, conteudo: opts.conteudo }];
+      } else if (opts.mode === "edit" && typeof opts.index === "number") {
+        const prev = material.cards ?? [];
+        newCards = prev.map((c, i) =>
+          i === opts.index ? { ...c, titulo: opts.titulo, conteudo: opts.conteudo } : c
+        );
+      } else return;
+      const updated = project.materiais.map((m) =>
+        m.id === materialId ? { ...m, cards: newCards } : m
+      );
+      setSaving(true);
+      try {
+        await updateDoc(doc(db, "projects", projectId), {
+          materiais: updated,
+          updatedAt: serverTimestamp(),
+        });
+        setMaterial((m) => (m ? { ...m, cards: newCards } : null));
+        setProject((p) => (p ? { ...p, materiais: updated } : null));
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -308,22 +337,41 @@ export default function MaterialStudyScreen() {
     if (!projectId || !materialId || !project?.materiais || !material) return;
     const db = getFirestoreDb();
     if (!db) return;
-    const prev = material.cards ?? [];
-    if (index < 0 || index >= prev.length) return;
-    const newCards = prev.filter((_, i) => i !== index);
-    const updated = project.materiais.map((m) =>
-      m.id === materialId ? { ...m, cards: newCards } : m
-    );
+    const useFlashcardsHere = Boolean(material.flashcards && material.flashcards.length > 0);
     setSaving(true);
     try {
-      await updateDoc(doc(db, "projects", projectId), {
-        materiais: updated,
-        updatedAt: serverTimestamp(),
-      });
-      setMaterial((m) => (m ? { ...m, cards: newCards } : null));
-      setProject((p) => (p ? { ...p, materiais: updated } : null));
-      if (cardIndex >= newCards.length && newCards.length > 0) setCardIndex(newCards.length - 1);
-      else if (newCards.length === 0) setCardIndex(0);
+      if (useFlashcardsHere) {
+        const prev = material.flashcards ?? [];
+        if (index < 0 || index >= prev.length) return;
+        const newFlashcards = prev.filter((_, i) => i !== index);
+        const updated = project.materiais.map((m) =>
+          m.id === materialId ? { ...m, flashcards: newFlashcards } : m
+        );
+        await updateDoc(doc(db, "projects", projectId), {
+          materiais: updated,
+          updatedAt: serverTimestamp(),
+        });
+        setMaterial((m) => (m ? { ...m, flashcards: newFlashcards } : null));
+        setProject((p) => (p ? { ...p, materiais: updated } : null));
+      } else {
+        const prev = material.cards ?? [];
+        if (index < 0 || index >= prev.length) return;
+        const newCards = prev.filter((_, i) => i !== index);
+        const updated = project.materiais.map((m) =>
+          m.id === materialId ? { ...m, cards: newCards } : m
+        );
+        await updateDoc(doc(db, "projects", projectId), {
+          materiais: updated,
+          updatedAt: serverTimestamp(),
+        });
+        setMaterial((m) => (m ? { ...m, cards: newCards } : null));
+        setProject((p) => (p ? { ...p, materiais: updated } : null));
+      }
+      const newLen = useFlashcardsHere
+        ? (material.flashcards ?? []).filter((_, i) => i !== index).length
+        : (material.cards ?? []).filter((_, i) => i !== index).length;
+      if (cardIndex >= newLen && newLen > 0) setCardIndex(newLen - 1);
+      else if (newLen === 0) setCardIndex(0);
     } finally {
       setSaving(false);
     }
@@ -356,6 +404,11 @@ export default function MaterialStudyScreen() {
   }
 
   const cards = material.cards ?? [];
+  const cardsForCarousel: ProjectCard[] =
+    material.flashcards && material.flashcards.length > 0
+      ? material.flashcards.map((f) => ({ titulo: f.titulo, conteudo: f.conteudo }))
+      : cards;
+  const useFlashcards = Boolean(material.flashcards && material.flashcards.length > 0);
   const nivelResumo = prefs?.nivelResumo ?? "medio";
   const resumoText = getDisplayResumoFromPrefs(material, nivelResumo);
   const minEst = estimateMin(material);
@@ -413,7 +466,7 @@ export default function MaterialStudyScreen() {
         <ThemedText style={styles.title}>{material.nomeArquivo ?? "Tópico"}</ThemedText>
         {!modoFoco && (
           <ThemedText style={[styles.meta, { color: colors.mutedForeground }]}>
-            ~{minEst} min · {cards.length} card{cards.length !== 1 ? "s" : ""}
+            ~{minEst} min · {cardsForCarousel.length} card{cardsForCarousel.length !== 1 ? "s" : ""}
             {prefs && ` · Duração sugerida: ${effectiveLabel}`}
           </ThemedText>
         )}
@@ -590,7 +643,7 @@ export default function MaterialStudyScreen() {
           </View>
         )}
 
-        {!modoFoco && activeTab === "flashcards" && cards.length > 0 && (
+        {!modoFoco && activeTab === "flashcards" && cardsForCarousel.length > 0 && (
           <View style={styles.concluirRow}>
             <Button onPress={handleConcluir} disabled={saving} style={styles.concluirBtn}>
               <Feather name="check-circle" size={18} color={colors.primaryForeground} />
@@ -737,13 +790,13 @@ export default function MaterialStudyScreen() {
         )}
         {activeTab === "minhas_questoes" && (
           <MaterialFlashcardEditor
-            cards={cards}
+            cards={cardsForCarousel}
             saving={saving}
             onSaveCard={handleSaveCard}
             onDeleteCard={handleDeleteCard}
           />
         )}
-        {activeTab === "flashcards" && cards.length === 0 && (
+        {activeTab === "flashcards" && cardsForCarousel.length === 0 && (
           <View
             style={[
               styles.emptyCard,
@@ -764,10 +817,10 @@ export default function MaterialStudyScreen() {
             </Button>
           </View>
         )}
-        {activeTab === "flashcards" && cards.length > 0 && (
+        {activeTab === "flashcards" && cardsForCarousel.length > 0 && (
           <>
             <FlashcardCarousel
-              cards={cards}
+              cards={cardsForCarousel}
               cardIndex={cardIndex}
               onCardIndexChange={setCardIndex}
               flipped={flipped}

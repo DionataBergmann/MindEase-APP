@@ -83,6 +83,7 @@ function getCardsWithSource(project: Project): ProjectCardWithSource[] {
         materialName: m.nomeArquivo ?? "PDF",
         card,
         indexInMaterial: i,
+        useFlashcards: false as const,
       }))
     );
   }
@@ -92,9 +93,43 @@ function getCardsWithSource(project: Project): ProjectCardWithSource[] {
       materialName: "PDF",
       card,
       indexInMaterial: i,
+      useFlashcards: false as const,
     }));
   }
   return [];
+}
+
+/** Cards for carousel/study: use flashcards when present, else cards. */
+function getCardsWithSourceForCarousel(project: Project): ProjectCardWithSource[] {
+  if (project.materiais?.length) {
+    return project.materiais.flatMap((m) => {
+      const useFlashcards = Boolean(m.flashcards && m.flashcards.length > 0);
+      const set = useFlashcards
+        ? (m.flashcards ?? []).map((f) => ({ titulo: f.titulo, conteudo: f.conteudo }))
+        : (m.cards ?? []);
+      return set.map((item, i) => ({
+        materialId: m.id,
+        materialName: m.nomeArquivo ?? "PDF",
+        card: "opcoes" in item ? item : { titulo: item.titulo, conteudo: item.conteudo },
+        indexInMaterial: i,
+        useFlashcards: useFlashcards as const,
+      }));
+    });
+  }
+  if (project.cards?.length) {
+    return project.cards.map((card, i) => ({
+      materialId: "legacy",
+      materialName: "PDF",
+      card,
+      indexInMaterial: i,
+      useFlashcards: false as const,
+    }));
+  }
+  return [];
+}
+
+function getCardsForCarousel(project: Project): ProjectCard[] {
+  return getCardsWithSourceForCarousel(project).map((x) => x.card);
 }
 
 function getMateriais(project: Project): Material[] {
@@ -263,19 +298,36 @@ export default function EstudarScreen() {
     const db = getFirestoreDb();
     if (!db) return;
     const materiais = getMateriais(project);
+    const mat = materiais.find((m) => m.id === opts.materialId);
+    if (!mat) return;
+    const useFlashcards = Boolean(mat.flashcards && mat.flashcards.length > 0);
     let updated: Material[];
     if (opts.mode === "edit" && typeof opts.indexInMaterial === "number") {
-      const mat = materiais.find((m) => m.id === opts.materialId);
-      if (!mat) return;
-      const newCards = (mat.cards ?? []).map((c, i) =>
-        i === opts.indexInMaterial ? { ...c, titulo: opts.titulo, conteudo: opts.conteudo } : c
-      );
-      updated = materiais.map((m) => (m.id === opts.materialId ? { ...m, cards: newCards } : m));
+      if (useFlashcards) {
+        const prev = mat.flashcards ?? [];
+        const newFlashcards = prev.map((f, i) =>
+          i === opts.indexInMaterial ? { titulo: opts.titulo, conteudo: opts.conteudo } : f
+        );
+        updated = materiais.map((m) =>
+          m.id === opts.materialId ? { ...m, flashcards: newFlashcards } : m
+        );
+      } else {
+        const newCards = (mat.cards ?? []).map((c, i) =>
+          i === opts.indexInMaterial ? { ...c, titulo: opts.titulo, conteudo: opts.conteudo } : c
+        );
+        updated = materiais.map((m) => (m.id === opts.materialId ? { ...m, cards: newCards } : m));
+      }
     } else if (opts.mode === "new") {
-      const mat = materiais.find((m) => m.id === opts.materialId);
-      if (!mat) return;
-      const newCards = [...(mat.cards ?? []), { titulo: opts.titulo, conteudo: opts.conteudo }];
-      updated = materiais.map((m) => (m.id === opts.materialId ? { ...m, cards: newCards } : m));
+      if (useFlashcards) {
+        const prev = mat.flashcards ?? [];
+        const newFlashcards = [...prev, { titulo: opts.titulo, conteudo: opts.conteudo }];
+        updated = materiais.map((m) =>
+          m.id === opts.materialId ? { ...m, flashcards: newFlashcards } : m
+        );
+      } else {
+        const newCards = [...(mat.cards ?? []), { titulo: opts.titulo, conteudo: opts.conteudo }];
+        updated = materiais.map((m) => (m.id === opts.materialId ? { ...m, cards: newCards } : m));
+      }
     } else return;
     setSaving(true);
     try {
@@ -296,10 +348,19 @@ export default function EstudarScreen() {
     const materiais = getMateriais(project);
     const mat = materiais.find((m) => m.id === item.materialId);
     if (!mat) return;
-    const newCards = (mat.cards ?? []).filter((_, i) => i !== item.indexInMaterial);
-    const updated = materiais.map((m) =>
-      m.id === item.materialId ? { ...m, cards: newCards } : m
-    );
+    let updated: Material[];
+    if (item.useFlashcards) {
+      const prev = mat.flashcards ?? [];
+      const newFlashcards = prev.filter((_, i) => i !== item.indexInMaterial);
+      updated = materiais.map((m) =>
+        m.id === item.materialId ? { ...m, flashcards: newFlashcards } : m
+      );
+    } else {
+      const newCards = (mat.cards ?? []).filter((_, i) => i !== item.indexInMaterial);
+      updated = materiais.map((m) =>
+        m.id === item.materialId ? { ...m, cards: newCards } : m
+      );
+    }
     setSaving(true);
     try {
       await updateDoc(doc(db, "projects", id), {
@@ -339,11 +400,13 @@ export default function EstudarScreen() {
   }
 
   const cards = getAllCards(project);
+  const cardsForCarousel = getCardsForCarousel(project);
+  const cardsWithSourceForCarousel = getCardsWithSourceForCarousel(project);
   const nivelResumo = prefs?.nivelResumo ?? "medio";
   const resumosWithMaterial = getResumosWithMaterial(project, nivelResumo);
   const cardsWithSource = getCardsWithSource(project);
   const materiais = getMateriais(project);
-  const totalMin = Math.max(5, cards.length * 3);
+  const totalMin = Math.max(5, cardsForCarousel.length * 3);
   const sessionDuration = prefs ? getSessionDuration(prefs) : { minutes: 28, label: "25-30 min" };
   const workMinutesBase = prefs?.pomodoroWorkMinutes ?? sessionDuration.minutes;
   const effectiveMinutes = Math.min(workMinutesBase, totalMin);
@@ -364,7 +427,7 @@ export default function EstudarScreen() {
     { key: "minhas_questoes", label: "Minhas flashcards", icon: "file-text" },
   ];
 
-  const cardsDue = cards.filter((c) => isCardDueForReview(c));
+  const cardsDue = cardsForCarousel.filter((c) => isCardDueForReview(c));
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -396,7 +459,7 @@ export default function EstudarScreen() {
         {!modoFoco && (
           <View style={styles.titleRow}>
             <ThemedText style={[styles.meta, { color: colors.mutedForeground }]}>
-              ~{totalMin} min · {cards.length} card{cards.length !== 1 ? "s" : ""}
+                ~{totalMin} min · {cardsForCarousel.length} card{cardsForCarousel.length !== 1 ? "s" : ""}
               {prefs && ` · Duração sugerida: ${effectiveLabel}`}
             </ThemedText>
           </View>
@@ -715,14 +778,14 @@ export default function EstudarScreen() {
         )}
         {activeTab === "minhas_questoes" && (
           <ProjectFlashcardEditor
-            items={cardsWithSource}
+            items={cardsWithSourceForCarousel}
             materiais={materiais}
             saving={saving}
             onSaveCard={handleSaveCard}
             onDeleteCard={handleDeleteCard}
           />
         )}
-        {activeTab === "flashcards" && cards.length === 0 && (
+        {activeTab === "flashcards" && cardsForCarousel.length === 0 && (
           <View
             style={[
               styles.emptyCard,
@@ -743,10 +806,10 @@ export default function EstudarScreen() {
             </Button>
           </View>
         )}
-        {activeTab === "flashcards" && cards.length > 0 && (
+        {activeTab === "flashcards" && cardsForCarousel.length > 0 && (
           <>
             <FlashcardCarousel
-              cards={cards}
+              cards={cardsForCarousel}
               cardIndex={cardIndex}
               onCardIndexChange={setCardIndex}
               flipped={flipped}

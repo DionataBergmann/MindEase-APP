@@ -14,6 +14,7 @@ import {
   type ImageSource,
   type PdfSource,
 } from "@/lib/content-processing";
+import { randomUUID } from "@/lib/uuid";
 import type { ProcessContentResponse } from "@/types/process-content";
 import type { Material } from "@/types/project";
 import { ThemedText } from "@/components/themed-text";
@@ -182,13 +183,14 @@ export default function AddPdfScreen() {
       }
       const existing = (snap.data().materiais ?? []) as Material[];
       const newMateriais: Material[] = results.map((result, i) => ({
-        id: `material-${Date.now()}-${i}`,
+        id: randomUUID(),
         nomeArquivo: getTopicDisplayNameWithPdfNames(i, pdfSources, imageSources.length),
         resumo: result.resumo,
         resumoBreve: result.resumoBreve,
         resumoMedio: result.resumoMedio,
         resumoCompleto: result.resumoCompleto,
         cards: result.cards,
+        ...(result.flashcards && result.flashcards.length > 0 ? { flashcards: result.flashcards } : {}),
         status: "pending",
       }));
       const updated = [...existing, ...newMateriais];

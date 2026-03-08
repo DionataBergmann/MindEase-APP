@@ -56,7 +56,8 @@ const STATUS_LABEL: Record<MaterialStatus, string> = {
 };
 
 function estimateMin(m: Material): number {
-  return Math.max(5, (m.cards?.length ?? 0) * 3);
+  const count = (m.flashcards?.length ?? m.cards?.length ?? 0);
+  return Math.max(5, count * 3);
 }
 
 export default function ProjectDetailScreen() {
@@ -413,7 +414,7 @@ export default function ProjectDetailScreen() {
               </View>
             </View>
             <ThemedText style={[styles.materialMeta, { color: colors.mutedForeground }]}>
-              ~{estimateMin(m)} min · {m.cards?.length ?? 0} cards
+              ~{estimateMin(m)} min · {(m.flashcards?.length ?? m.cards?.length) ?? 0} cards
             </ThemedText>
           </TouchableOpacity>
           <View ref={isMenuOpen ? menuAnchorRef : undefined} style={styles.materialMenuWrap}>

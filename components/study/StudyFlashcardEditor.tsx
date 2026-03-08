@@ -21,6 +21,8 @@ export type ProjectCardWithSource = {
   materialName: string;
   card: ProjectCard;
   indexInMaterial: number;
+  /** When true, editor/save/delete operate on material.flashcards instead of material.cards */
+  useFlashcards?: boolean;
 };
 
 export type ProjectFlashcardEditorProps = {
@@ -95,15 +97,35 @@ export function ProjectFlashcardEditor({
               <ThemedText style={[styles.itemMaterial, { color: colors.mutedForeground }]}>
                 {item.materialName}
               </ThemedText>
-              <ThemedText style={styles.itemTitulo} numberOfLines={1}>
+              <ThemedText style={styles.itemTitulo}>
                 {item.card.titulo}
               </ThemedText>
-              <ThemedText
-                style={[styles.itemConteudo, { color: colors.mutedForeground }]}
-                numberOfLines={2}
-              >
-                {item.card.conteudo}
-              </ThemedText>
+              {item.card.opcoes && item.card.opcoes.length > 0 ? (
+                <View style={styles.opcoesWrap}>
+                  {item.card.opcoes.map((opt, j) => (
+                    <ThemedText
+                      key={j}
+                      style={[
+                        styles.itemConteudo,
+                        { color: colors.mutedForeground },
+                        typeof item.card.correctOptionIndex === "number" &&
+                        item.card.correctOptionIndex === j
+                          ? { color: colors.primary, fontWeight: "600" }
+                          : {},
+                      ]}
+                    >
+                      {opt}
+                    </ThemedText>
+                  ))}
+                </View>
+              ) : (
+                <ThemedText
+                  style={[styles.itemConteudo, { color: colors.mutedForeground }]}
+                  numberOfLines={2}
+                >
+                  {item.card.conteudo}
+                </ThemedText>
+              )}
             </View>
             <View style={styles.itemActions}>
               <TouchableOpacity
@@ -370,15 +392,34 @@ export function MaterialFlashcardEditor({
             style={[styles.item, { backgroundColor: colors.card, borderColor: colors.border }]}
           >
             <View style={styles.itemContent}>
-              <ThemedText style={styles.itemTitulo} numberOfLines={1}>
+              <ThemedText style={styles.itemTitulo}>
                 {c.titulo}
               </ThemedText>
-              <ThemedText
-                style={[styles.itemConteudo, { color: colors.mutedForeground }]}
-                numberOfLines={2}
-              >
-                {c.conteudo}
-              </ThemedText>
+              {c.opcoes && c.opcoes.length > 0 ? (
+                <View style={styles.opcoesWrap}>
+                  {c.opcoes.map((opt, j) => (
+                    <ThemedText
+                      key={j}
+                      style={[
+                        styles.itemConteudo,
+                        { color: colors.mutedForeground },
+                        typeof c.correctOptionIndex === "number" && c.correctOptionIndex === j
+                          ? { color: colors.primary, fontWeight: "600" }
+                          : {},
+                      ]}
+                    >
+                      {opt}
+                    </ThemedText>
+                  ))}
+                </View>
+              ) : (
+                <ThemedText
+                  style={[styles.itemConteudo, { color: colors.mutedForeground }]}
+                  numberOfLines={2}
+                >
+                  {c.conteudo}
+                </ThemedText>
+              )}
             </View>
             <View style={styles.itemActions}>
               <TouchableOpacity
@@ -523,6 +564,7 @@ const styles = StyleSheet.create({
   itemMaterial: { fontSize: 12, marginBottom: 2 },
   itemTitulo: { fontSize: 15, fontWeight: "600" },
   itemConteudo: { fontSize: 14, marginTop: 4 },
+  opcoesWrap: { marginTop: 4, gap: 2 },
   itemActions: { flexDirection: "row", gap: 8 },
   iconBtn: { padding: 8, borderRadius: 8 },
   emptyText: { fontSize: 14 },
