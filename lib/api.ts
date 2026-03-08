@@ -30,9 +30,19 @@ export async function processContent(body: ProcessContentBody): Promise<ProcessC
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data: unknown;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(
+        res.ok
+          ? "Resposta inválida da API (não é JSON)."
+          : `Erro do servidor: ${text.slice(0, 200)}${text.length > 200 ? "…" : ""}`
+      );
+    }
     if (!res.ok) {
-      throw new Error((data as { error?: string }).error ?? "Erro ao processar com a IA.");
+      throw new Error((data as { error?: string }).error ?? text?.slice(0, 200) ?? "Erro ao processar com a IA.");
     }
     return data as ProcessContentResponse;
   } catch (err) {
@@ -59,9 +69,19 @@ export async function chat(body: ChatBody): Promise<{ message: string }> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data: unknown;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(
+        res.ok
+          ? "Resposta inválida da API (não é JSON)."
+          : `Erro do servidor: ${text.slice(0, 200)}${text.length > 200 ? "…" : ""}`
+      );
+    }
     if (!res.ok) {
-      throw new Error((data as { error?: string }).error ?? "Erro ao enviar mensagem.");
+      throw new Error((data as { error?: string }).error ?? text?.slice(0, 200) ?? "Erro ao enviar mensagem.");
     }
     return data as { message: string };
   } catch (err) {

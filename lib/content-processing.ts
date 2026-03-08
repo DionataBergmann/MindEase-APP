@@ -1,4 +1,5 @@
 import { processContent } from "./api";
+import { compressImageForApi } from "./image-utils";
 import type { ProcessContentResponse } from "@/types/process-content";
 
 export type ImageSource = { uri: string; base64?: string };
@@ -32,10 +33,6 @@ export async function extractTextFromPdf(uri: string): Promise<string> {
   return text?.trim() ?? "";
 }
 
-function toDataUrl(base64: string, mime = "image/jpeg"): string {
-  return `data:${mime};base64,${base64}`;
-}
-
 export async function processSources({
   pdfSources,
   imageSources,
@@ -64,7 +61,10 @@ export async function processSources({
 
     const compressedImages: string[] = [];
     for (const img of imageSources) {
-      if (img.base64) compressedImages.push(toDataUrl(img.base64));
+      if (img.base64) {
+        const dataUrl = await compressImageForApi(img.uri, img.base64);
+        compressedImages.push(dataUrl);
+      }
     }
 
     const body: { text?: string; images?: string[] } = {};
@@ -96,7 +96,7 @@ export async function processSources({
   const withBase64 = imageSources.filter((s) => s.base64);
   for (let i = 0; i < withBase64.length; i++) {
     onStep?.(pdfCount + i);
-    const dataUrl = toDataUrl(withBase64[i].base64!);
+    const dataUrl = await compressImageForApi(withBase64[i].uri, withBase64[i].base64);
     const res = await processContent({ images: [dataUrl] });
     results.push(res);
   }
