@@ -9,8 +9,8 @@ import {
   type UserPreferences,
   type NivelResumo,
   type StudyTab,
-} from './preferences-types';
-import { getPreferencesAsync, setPreferencesAsync } from './preferences-storage';
+} from "./preferences-types";
+import { getPreferencesAsync, setPreferencesAsync } from "./preferences-storage";
 
 export type {
   FormatoPreferido,
@@ -22,8 +22,8 @@ export type {
   NivelResumo,
   UserPreferences,
   StudyTab,
-} from './preferences-types';
-export { DEFAULT_USER_PREFERENCES } from './preferences-types';
+} from "./preferences-types";
+export { DEFAULT_USER_PREFERENCES } from "./preferences-types";
 
 export const getPreferences = getPreferencesAsync;
 export const setPreferences = setPreferencesAsync;

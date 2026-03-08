@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   StyleSheet,
@@ -6,49 +6,49 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-} from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { ThemedText } from '@/components/themed-text';
-import { Button } from '@/components/atoms/Button';
-import { Input } from '@/components/atoms/Input';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { chat } from '@/lib/api';
+} from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { ThemedText } from "@/components/themed-text";
+import { Button } from "@/components/atoms/Button";
+import { Input } from "@/components/atoms/Input";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
+import { chat } from "@/lib/api";
 
 export type StudyChatProps = {
   headerText: string;
   buildContext: () => string;
 };
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export function StudyChat({ headerText, buildContext }: StudyChatProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
+  const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
   const handleSubmit = async () => {
     const text = chatInput.trim();
     if (!text || chatLoading) return;
-    setChatInput('');
-    setChatMessages((prev) => [...prev, { role: 'user', content: text }]);
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: text }]);
     setChatLoading(true);
     try {
       const context = buildContext();
       const { message } = await chat({
         context,
-        messages: [...chatMessages, { role: 'user', content: text }],
+        messages: [...chatMessages, { role: "user", content: text }],
       });
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: message ?? '' }]);
+      setChatMessages((prev) => [...prev, { role: "assistant", content: message ?? "" }]);
     } catch (err) {
       setChatMessages((prev) => [
         ...prev,
         {
-          role: 'assistant',
-          content: err instanceof Error ? err.message : 'Erro ao conversar.',
+          role: "assistant",
+          content: err instanceof Error ? err.message : "Erro ao conversar.",
         },
       ]);
     } finally {
@@ -79,13 +79,13 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
             key={i}
             style={[
               styles.bubbleWrap,
-              m.role === 'user' ? styles.bubbleWrapUser : styles.bubbleWrapAssistant,
+              m.role === "user" ? styles.bubbleWrapUser : styles.bubbleWrapAssistant,
             ]}
           >
             <View
               style={[
                 styles.bubble,
-                m.role === 'user'
+                m.role === "user"
                   ? { backgroundColor: colors.primary }
                   : { backgroundColor: colors.muted },
               ]}
@@ -93,7 +93,9 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
               <ThemedText
                 style={[
                   styles.bubbleText,
-                  m.role === 'user' ? { color: colors.primaryForeground } : { color: colors.foreground },
+                  m.role === "user"
+                    ? { color: colors.primaryForeground }
+                    : { color: colors.foreground },
                 ]}
               >
                 {m.content}
@@ -113,7 +115,7 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
       </ScrollView>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={[styles.footer, { borderTopColor: colors.border }]}
       >
         <Input
@@ -135,7 +137,7 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
           ) : (
             <>
               <Feather name="send" size={18} color={colors.primaryForeground} />
-              <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>
+              <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
                 Enviar
               </ThemedText>
             </>
@@ -147,18 +149,18 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { borderRadius: 12, borderWidth: 1, overflow: 'hidden', minHeight: 280 },
+  container: { borderRadius: 12, borderWidth: 1, overflow: "hidden", minHeight: 280 },
   header: { padding: 16, borderBottomWidth: 1 },
   headerText: { fontSize: 14 },
   messages: { maxHeight: 360 },
   messagesContent: { padding: 16, paddingBottom: 8 },
-  emptyHint: { fontSize: 14, textAlign: 'center', paddingVertical: 24 },
+  emptyHint: { fontSize: 14, textAlign: "center", paddingVertical: 24 },
   bubbleWrap: { marginBottom: 12 },
-  bubbleWrapUser: { alignItems: 'flex-end' },
-  bubbleWrapAssistant: { alignItems: 'flex-start' },
-  bubble: { maxWidth: '85%', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleWrapUser: { alignItems: "flex-end" },
+  bubbleWrapAssistant: { alignItems: "flex-start" },
+  bubble: { maxWidth: "85%", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleText: { fontSize: 14 },
-  footer: { flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: 1 },
+  footer: { flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1 },
   input: { flex: 1, minHeight: 44, maxHeight: 100 },
-  sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sendBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
 });

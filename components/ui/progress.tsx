@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, StyleSheet, type ViewProps } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import React from "react";
+import { View, StyleSheet, type ViewProps } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
 
 export type ProgressProps = ViewProps & {
   value?: number;
@@ -10,7 +10,7 @@ export type ProgressProps = ViewProps & {
 
 export const Progress = React.forwardRef<View, ProgressProps>(
   ({ style, value = 0, max = 100, ...props }, ref) => {
-    const scheme = useColorScheme() ?? 'light';
+    const scheme = useColorScheme() ?? "light";
     const colors = Colors[scheme];
     const pct = Math.min(max, Math.max(0, value));
     const widthPct = max > 0 ? (pct / max) * 100 : 0;
@@ -18,34 +18,25 @@ export const Progress = React.forwardRef<View, ProgressProps>(
     return (
       <View
         ref={ref}
-        style={[
-          styles.track,
-          { backgroundColor: colors.muted ?? colors.secondary },
-          style,
-        ]}
+        style={[styles.track, { backgroundColor: colors.muted ?? colors.secondary }, style]}
         {...props}
       >
-        <View
-          style={[
-            styles.fill,
-            { backgroundColor: colors.primary, width: `${widthPct}%` },
-          ]}
-        />
+        <View style={[styles.fill, { backgroundColor: colors.primary, width: `${widthPct}%` }]} />
       </View>
     );
   }
 );
-Progress.displayName = 'Progress';
+Progress.displayName = "Progress";
 
 const styles = StyleSheet.create({
   track: {
     height: 8,
-    width: '100%',
+    width: "100%",
     borderRadius: 9999,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   fill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 9999,
   },
 });

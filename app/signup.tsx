@@ -1,4 +1,4 @@
-import { SignupForm } from '@/components/organisms';
+import { SignupForm } from "@/components/organisms";
 
 export default function SignupScreen() {
   return <SignupForm />;

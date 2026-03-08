@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   StyleSheet,
   ScrollView,
@@ -8,14 +8,14 @@ import {
   Modal,
   Pressable,
   TextInput,
-  Alert,
-} from 'react-native';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Feather from '@expo/vector-icons/Feather';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-import { getFirebaseAuth, getFirestoreDb } from '@/lib/firebase';
+} from "react-native";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useWindowDimensions } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 import {
   getPreferences,
   setPreferences,
@@ -23,24 +23,32 @@ import {
   getSessionDuration,
   getDisplayResumo as getDisplayResumoFromPrefs,
   type UserPreferences,
-} from '@/lib/preferences';
-import { isDueForReview, getNextReviewDateFromLevel, todayISO, isCardDueForReview } from '@/lib/spaced-repetition';
-import type { Project, ProjectCard, Material } from '@/types/project';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/atoms/Button';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { useSpacingScale, useContrastLevel, usePreferencesContext } from '@/contexts/PreferencesContext';
+} from "@/lib/preferences";
+import {
+  isDueForReview,
+  getNextReviewDateFromLevel,
+  todayISO,
+} from "@/lib/spaced-repetition";
+import type { Project, ProjectCard, Material } from "@/types/project";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/atoms/Button";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
+import {
+  useSpacingScale,
+  useContrastLevel,
+  usePreferencesContext,
+} from "@/contexts/PreferencesContext";
 import {
   FlashcardCarousel,
   StudyQuizPanel,
   StudyChat,
   MaterialFlashcardEditor,
   StudyTimer,
-} from '@/components/study';
+} from "@/components/study";
 
-type StudyTab = 'flashcards' | 'revisar' | 'quiz' | 'chat' | 'minhas_questoes';
+type StudyTab = "flashcards" | "quiz" | "chat" | "minhas_questoes";
 
 function estimateMin(m: Material): number {
   return Math.max(5, (m.cards?.length ?? 0) * 3);
@@ -50,11 +58,12 @@ export default function MaterialStudyScreen() {
   const router = useRouter();
   const { id: projectId, materialId } = useLocalSearchParams<{ id: string; materialId: string }>();
   const insets = useSafeAreaInsets();
-  const scheme = useColorScheme() ?? 'light';
+  const { width: windowWidth } = useWindowDimensions();
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
   const spacingScale = useSpacingScale();
   const contrastLevel = useContrastLevel();
-  const borderW = contrastLevel === 'alto' ? 2 : 1;
+  const borderW = contrastLevel === "alto" ? 2 : 1;
   const prefsContext = usePreferencesContext();
   const inProgressSent = useRef(false);
 
@@ -64,17 +73,18 @@ export default function MaterialStudyScreen() {
   const [notFound, setNotFound] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [revisarCardIndex, setRevisarCardIndex] = useState(0);
-  const [revisarFlipped, setRevisarFlipped] = useState(false);
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
-  const [activeTab, setActiveTab] = useState<StudyTab>('flashcards');
+  const [activeTab, setActiveTab] = useState<StudyTab>("flashcards");
   const [modoFoco, setModoFoco] = useState(false);
   const [showSessionReminder, setShowSessionReminder] = useState(false);
-  const [pomodoroBreak, setPomodoroBreak] = useState<{ active: boolean; secondsLeft: number }>({ active: false, secondsLeft: 0 });
+  const [pomodoroBreak, setPomodoroBreak] = useState<{ active: boolean; secondsLeft: number }>({
+    active: false,
+    secondsLeft: 0,
+  });
   const [showTimerCompleteModal, setShowTimerCompleteModal] = useState(false);
   const [sessionMinutesOverride, setSessionMinutesOverride] = useState<number | null>(null);
   const [editResumoOpen, setEditResumoOpen] = useState(false);
-  const [editResumoValue, setEditResumoValue] = useState('');
+  const [editResumoValue, setEditResumoValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [markedAsReviewed, setMarkedAsReviewed] = useState(false);
 
@@ -97,7 +107,7 @@ export default function MaterialStudyScreen() {
         return;
       }
       try {
-        const snap = await getDoc(doc(db, 'projects', projectId));
+        const snap = await getDoc(doc(db, "projects", projectId));
         if (!snap.exists() || snap.data()?.userId !== user.uid) {
           setNotFound(true);
           return;
@@ -105,12 +115,12 @@ export default function MaterialStudyScreen() {
         const d = snap.data()!;
         const materiais: Material[] = Array.isArray(d.materiais)
           ? d.materiais
-          : d.resumo || (d.cards?.length > 0)
+          : d.resumo || d.cards?.length > 0
             ? [
                 {
-                  id: 'legacy',
-                  nomeArquivo: 'PDF',
-                  resumo: d.resumo ?? '',
+                  id: "legacy",
+                  nomeArquivo: "PDF",
+                  resumo: d.resumo ?? "",
                   cards: d.cards ?? [],
                 },
               ]
@@ -123,11 +133,11 @@ export default function MaterialStudyScreen() {
         setProject({
           id: snap.id,
           userId: d.userId,
-          title: d.title ?? 'Sem título',
-          emoji: d.emoji ?? '📚',
+          title: d.title ?? "Sem título",
+          emoji: d.emoji ?? "📚",
           pdfCount: d.pdfCount ?? 0,
           progress: d.progress ?? 0,
-          lastAccess: '',
+          lastAccess: "",
           materiais,
           resumo: d.resumo,
           cards: d.cards ?? [],
@@ -151,7 +161,8 @@ export default function MaterialStudyScreen() {
   useEffect(() => {
     getPreferences().then((p) => {
       setPrefs(p);
-      setActiveTab(getPreferredStudyTab(p) as StudyTab);
+      const tab = getPreferredStudyTab(p);
+      setActiveTab((tab === "revisar" ? "flashcards" : tab) as StudyTab);
       setModoFoco(p.modoFoco);
     });
   }, []);
@@ -163,17 +174,13 @@ export default function MaterialStudyScreen() {
   );
 
   useEffect(() => {
-    const cards = material?.cards ?? [];
-    const due = cards.filter((c) => isCardDueForReview(c));
-    if (due.length > 0 && revisarCardIndex >= due.length) {
-      setRevisarCardIndex(Math.max(0, due.length - 1));
-    }
-  }, [material?.cards, revisarCardIndex]);
-
-  useEffect(() => {
     if (!pomodoroBreak.active || pomodoroBreak.secondsLeft <= 0) return;
     const t = setInterval(() => {
-      setPomodoroBreak((prev) => (prev.secondsLeft <= 1 ? { active: false, secondsLeft: 0 } : { ...prev, secondsLeft: prev.secondsLeft - 1 }));
+      setPomodoroBreak((prev) =>
+        prev.secondsLeft <= 1
+          ? { active: false, secondsLeft: 0 }
+          : { ...prev, secondsLeft: prev.secondsLeft - 1 }
+      );
     }, 1000);
     return () => clearInterval(t);
   }, [pomodoroBreak.active, pomodoroBreak.secondsLeft]);
@@ -181,14 +188,14 @@ export default function MaterialStudyScreen() {
   // Marcar material como "in_progress" ao abrir
   useEffect(() => {
     if (inProgressSent.current || !projectId || !materialId || !project?.materiais) return;
-    if (material?.status === 'in_progress' || material?.status === 'completed') return;
+    if (material?.status === "in_progress" || material?.status === "completed") return;
     const db = getFirestoreDb();
     if (!db) return;
     inProgressSent.current = true;
     const updated = project.materiais.map((m) =>
-      m.id === materialId ? { ...m, status: 'in_progress' as const } : m
+      m.id === materialId ? { ...m, status: "in_progress" as const } : m
     );
-    updateDoc(doc(db, 'projects', projectId), {
+    updateDoc(doc(db, "projects", projectId), {
       materiais: updated,
       updatedAt: serverTimestamp(),
     }).catch(() => {});
@@ -199,19 +206,19 @@ export default function MaterialStudyScreen() {
     const db = getFirestoreDb();
     if (!db) return;
     const updated = project.materiais.map((m) =>
-      m.id === materialId ? { ...m, status: 'completed' as const } : m
+      m.id === materialId ? { ...m, status: "completed" as const } : m
     );
-    const completedCount = updated.filter((m) => (m.status ?? 'pending') === 'completed').length;
+    const completedCount = updated.filter((m) => (m.status ?? "pending") === "completed").length;
     const progress = updated.length === 0 ? 0 : Math.round((completedCount / updated.length) * 100);
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'projects', projectId), {
+      await updateDoc(doc(db, "projects", projectId), {
         materiais: updated,
         progress,
         updatedAt: serverTimestamp(),
       });
       setProject((p) => (p ? { ...p, materiais: updated } : null));
-      setMaterial((m) => (m ? { ...m, status: 'completed' } : null));
+      setMaterial((m) => (m ? { ...m, status: "completed" } : null));
       router.back();
     } finally {
       setSaving(false);
@@ -227,7 +234,7 @@ export default function MaterialStudyScreen() {
       const updated = project.materiais.map((m) =>
         m.id === materialId ? { ...m, resumo: editResumoValue } : m
       );
-      await updateDoc(doc(db, 'projects', projectId), {
+      await updateDoc(doc(db, "projects", projectId), {
         materiais: updated,
         updatedAt: serverTimestamp(),
       });
@@ -251,7 +258,7 @@ export default function MaterialStudyScreen() {
     );
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'projects', projectId), {
+      await updateDoc(doc(db, "projects", projectId), {
         materiais: updated,
         updatedAt: serverTimestamp(),
       });
@@ -264,7 +271,7 @@ export default function MaterialStudyScreen() {
   };
 
   const handleSaveCard = async (opts: {
-    mode: 'edit' | 'new';
+    mode: "edit" | "new";
     index?: number;
     titulo: string;
     conteudo: string;
@@ -273,9 +280,9 @@ export default function MaterialStudyScreen() {
     const db = getFirestoreDb();
     if (!db) return;
     let newCards: ProjectCard[];
-    if (opts.mode === 'new') {
+    if (opts.mode === "new") {
       newCards = [...(material.cards ?? []), { titulo: opts.titulo, conteudo: opts.conteudo }];
-    } else if (opts.mode === 'edit' && typeof opts.index === 'number') {
+    } else if (opts.mode === "edit" && typeof opts.index === "number") {
       const prev = material.cards ?? [];
       newCards = prev.map((c, i) =>
         i === opts.index ? { ...c, titulo: opts.titulo, conteudo: opts.conteudo } : c
@@ -286,7 +293,7 @@ export default function MaterialStudyScreen() {
     );
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'projects', projectId), {
+      await updateDoc(doc(db, "projects", projectId), {
         materiais: updated,
         updatedAt: serverTimestamp(),
       });
@@ -309,7 +316,7 @@ export default function MaterialStudyScreen() {
     );
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'projects', projectId), {
+      await updateDoc(doc(db, "projects", projectId), {
         materiais: updated,
         updatedAt: serverTimestamp(),
       });
@@ -340,33 +347,42 @@ export default function MaterialStudyScreen() {
         </ThemedText>
         <Button onPress={() => router.back()}>
           <Feather name="arrow-left" size={18} color={colors.primaryForeground} />
-          <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Voltar</ThemedText>
+          <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
+            Voltar
+          </ThemedText>
         </Button>
       </ThemedView>
     );
   }
 
   const cards = material.cards ?? [];
-  const nivelResumo = prefs?.nivelResumo ?? 'medio';
+  const nivelResumo = prefs?.nivelResumo ?? "medio";
   const resumoText = getDisplayResumoFromPrefs(material, nivelResumo);
   const minEst = estimateMin(material);
   const dueForReview = isDueForReview(material.nextReviewAt) && !markedAsReviewed;
-  const sessionDuration = prefs ? getSessionDuration(prefs) : { minutes: 28, label: '25-30 min' };
+  const sessionDuration = prefs ? getSessionDuration(prefs) : { minutes: 28, label: "25-30 min" };
   const workMinutesBase = prefs?.pomodoroWorkMinutes ?? sessionDuration.minutes;
   const effectiveMinutes = Math.min(workMinutesBase, minEst);
   const sessionMinutes = sessionMinutesOverride ?? effectiveMinutes;
-  const effectiveLabel = effectiveMinutes < workMinutesBase ? `${effectiveMinutes} min` : (prefs?.pomodoroWorkMinutes != null ? `${workMinutesBase} min` : sessionDuration.label);
+  const effectiveLabel =
+    effectiveMinutes < workMinutesBase
+      ? `${effectiveMinutes} min`
+      : prefs?.pomodoroWorkMinutes != null
+        ? `${workMinutesBase} min`
+        : sessionDuration.label;
   const pomodoroBreakMinutes = Math.min(60, Math.max(1, prefs?.pomodoroBreakMinutes ?? 5));
 
   const tabs: { key: StudyTab; label: string; icon: keyof typeof Feather.glyphMap }[] = [
-    { key: 'flashcards', label: 'Flashcards', icon: 'layers' },
-    { key: 'revisar', label: 'Revisar', icon: 'refresh-cw' },
-    { key: 'quiz', label: 'Quiz', icon: 'help-circle' },
-    { key: 'chat', label: 'Chat IA', icon: 'message-circle' },
-    { key: 'minhas_questoes', label: 'Minhas flashcards', icon: 'file-text' },
+    { key: "flashcards", label: "Flashcards", icon: "layers" },
+    { key: "quiz", label: "Quiz", icon: "help-circle" },
+    { key: "chat", label: "Chat IA", icon: "message-circle" },
+    { key: "minhas_questoes", label: "Minhas flashcards", icon: "file-text" },
   ];
 
-  const cardsDue = cards.filter((c) => isCardDueForReview(c));
+  const tabGap = 8 * spacingScale;
+  const stripPadding = 8 * spacingScale;
+  const scrollPadding = 16 * spacingScale;
+  const tabItemWidth = (windowWidth - scrollPadding * 2 - stripPadding * 2 - tabGap) / 2;
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -382,7 +398,11 @@ export default function MaterialStudyScreen() {
         showsVerticalScrollIndicator={false}
       >
         {!modoFoco && (
-          <TouchableOpacity style={[styles.backRow, { marginBottom: 16 * spacingScale, gap: 8 * spacingScale }]} onPress={() => router.back()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.backRow, { marginBottom: 16 * spacingScale, gap: 8 * spacingScale }]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
             <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
             <ThemedText style={[styles.backText, { color: colors.mutedForeground }]}>
               Voltar ao projeto
@@ -390,15 +410,27 @@ export default function MaterialStudyScreen() {
           </TouchableOpacity>
         )}
 
-        <ThemedText style={styles.title}>{material.nomeArquivo ?? 'Tópico'}</ThemedText>
+        <ThemedText style={styles.title}>{material.nomeArquivo ?? "Tópico"}</ThemedText>
         {!modoFoco && (
           <ThemedText style={[styles.meta, { color: colors.mutedForeground }]}>
-            ~{minEst} min · {cards.length} card{cards.length !== 1 ? 's' : ''}
+            ~{minEst} min · {cards.length} card{cards.length !== 1 ? "s" : ""}
             {prefs && ` · Duração sugerida: ${effectiveLabel}`}
           </ThemedText>
         )}
         {showSessionReminder && !pomodoroBreak.active && (
-          <View style={[styles.reminderBanner, { backgroundColor: colors.primary + '20', borderColor: colors.primary + '50', borderWidth: borderW, marginBottom: 12 * spacingScale, gap: 8 * spacingScale, padding: 12 * spacingScale }]}>
+          <View
+            style={[
+              styles.reminderBanner,
+              {
+                backgroundColor: colors.primary + "20",
+                borderColor: colors.primary + "50",
+                borderWidth: borderW,
+                marginBottom: 12 * spacingScale,
+                gap: 8 * spacingScale,
+                padding: 12 * spacingScale,
+              },
+            ]}
+          >
             <Feather name="clock" size={18} color={colors.primary} />
             <ThemedText style={[styles.reminderText, { color: colors.primary }]}>
               Você está estudando há um tempo. Que tal uma pausa?
@@ -408,26 +440,47 @@ export default function MaterialStudyScreen() {
         {/* Modal: pausa Pomodoro */}
         {pomodoroBreak.active && (
           <Modal visible transparent animationType="fade">
-            <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-              <View style={[styles.modalCardPausa, { backgroundColor: colors.card, borderColor: colors.primary + '40' }]}>
-                <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground }]}>Pausa</ThemedText>
+            <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.6)" }]}>
+              <View
+                style={[
+                  styles.modalCardPausa,
+                  { backgroundColor: colors.card, borderColor: colors.primary + "40" },
+                ]}
+              >
+                <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground }]}>
+                  Pausa
+                </ThemedText>
                 {pomodoroBreak.secondsLeft > 0 ? (
                   <>
                     <ThemedText style={[styles.modalHint, { color: colors.mutedForeground }]}>
                       Pausa de {pomodoroBreakMinutes} min — descanse um pouco.
                     </ThemedText>
                     <ThemedText style={[styles.pomodoroTime, { marginVertical: 16 }]}>
-                      {String(Math.floor(pomodoroBreak.secondsLeft / 60)).padStart(2, '0')}:{String(pomodoroBreak.secondsLeft % 60).padStart(2, '0')}
+                      {String(Math.floor(pomodoroBreak.secondsLeft / 60)).padStart(2, "0")}:
+                      {String(pomodoroBreak.secondsLeft % 60).padStart(2, "0")}
                     </ThemedText>
-                    <ThemedText style={[styles.modalHint, { color: colors.mutedForeground, fontSize: 12 }]}>
+                    <ThemedText
+                      style={[styles.modalHint, { color: colors.mutedForeground, fontSize: 12 }]}
+                    >
                       Aguarde o fim da pausa para voltar ao estudo.
                     </ThemedText>
                   </>
                 ) : (
                   <>
-                    <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground, marginBottom: 16 }]}>Pausa concluída.</ThemedText>
-                    <Button onPress={() => { setPomodoroBreak({ active: false, secondsLeft: 0 }); setShowSessionReminder(true); }}>
-                      <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Voltar ao estudo</ThemedText>
+                    <ThemedText
+                      style={[styles.pomodoroTitle, { color: colors.foreground, marginBottom: 16 }]}
+                    >
+                      Pausa concluída.
+                    </ThemedText>
+                    <Button
+                      onPress={() => {
+                        setPomodoroBreak({ active: false, secondsLeft: 0 });
+                        setShowSessionReminder(true);
+                      }}
+                    >
+                      <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
+                        Voltar ao estudo
+                      </ThemedText>
                     </Button>
                   </>
                 )}
@@ -438,25 +491,63 @@ export default function MaterialStudyScreen() {
 
         {showTimerCompleteModal && prefs && (
           <Modal visible transparent animationType="fade">
-            <Pressable style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]} onPress={() => setShowTimerCompleteModal(false)}>
-              <Pressable style={[styles.modalCardPausa, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
-                <ThemedText style={[styles.modalTitle, { color: colors.foreground }]}>Sessão concluída</ThemedText>
+            <Pressable
+              style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+              onPress={() => setShowTimerCompleteModal(false)}
+            >
+              <Pressable
+                style={[
+                  styles.modalCardPausa,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+                onPress={(e) => e.stopPropagation()}
+              >
+                <ThemedText style={[styles.modalTitle, { color: colors.foreground }]}>
+                  Sessão concluída
+                </ThemedText>
                 <ThemedText style={[styles.modalHint, { color: colors.mutedForeground }]}>
                   O tempo de foco acabou. Que tal uma pausa antes de continuar?
                 </ThemedText>
-                <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center', marginTop: 20 }}>
+                <View
+                  style={{ flexDirection: "row", gap: 12, justifyContent: "center", marginTop: 20 }}
+                >
                   {prefs.pausasPomodoro ? (
                     <>
-                      <Button onPress={() => { setPomodoroBreak({ active: true, secondsLeft: pomodoroBreakMinutes * 60 }); setShowTimerCompleteModal(false); }}>
-                        <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Iniciar pausa ({pomodoroBreakMinutes} min)</ThemedText>
+                      <Button
+                        onPress={() => {
+                          setPomodoroBreak({
+                            active: true,
+                            secondsLeft: pomodoroBreakMinutes * 60,
+                          });
+                          setShowTimerCompleteModal(false);
+                        }}
+                      >
+                        <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
+                          Iniciar pausa ({pomodoroBreakMinutes} min)
+                        </ThemedText>
                       </Button>
-                      <Button variant="outline" onPress={() => { setShowSessionReminder(true); setShowTimerCompleteModal(false); }}>
-                        <ThemedText style={{ color: colors.foreground, fontWeight: '600' }}>Agora não</ThemedText>
+                      <Button
+                        variant="outline"
+                        onPress={() => {
+                          setShowSessionReminder(true);
+                          setShowTimerCompleteModal(false);
+                        }}
+                      >
+                        <ThemedText style={{ color: colors.foreground, fontWeight: "600" }}>
+                          Agora não
+                        </ThemedText>
                       </Button>
                     </>
                   ) : (
-                    <Button onPress={() => { setShowSessionReminder(true); setShowTimerCompleteModal(false); }}>
-                      <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>OK</ThemedText>
+                    <Button
+                      onPress={() => {
+                        setShowSessionReminder(true);
+                        setShowTimerCompleteModal(false);
+                      }}
+                    >
+                      <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
+                        OK
+                      </ThemedText>
                     </Button>
                   )}
                 </View>
@@ -466,7 +557,13 @@ export default function MaterialStudyScreen() {
         )}
 
         {prefs && !pomodoroBreak.active && (
-          <View style={[styles.timerRow, styles.timerAndFocoRow, { marginBottom: 12 * spacingScale, gap: 12 * spacingScale }]}>
+          <View
+            style={[
+              styles.timerRow,
+              styles.timerAndFocoRow,
+              { marginBottom: 12 * spacingScale, gap: 12 * spacingScale },
+            ]}
+          >
             <StudyTimer
               initialMinutes={sessionMinutes}
               editable
@@ -486,18 +583,18 @@ export default function MaterialStudyScreen() {
               style={styles.focoBtn}
             >
               <Feather name="target" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-              <ThemedText style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>
-                {modoFoco ? 'Sair do modo foco' : 'Modo foco'}
+              <ThemedText style={{ color: colors.primary, fontWeight: "600", fontSize: 14 }}>
+                {modoFoco ? "Sair do modo foco" : "Modo foco"}
               </ThemedText>
             </Button>
           </View>
         )}
 
-        {!modoFoco && activeTab === 'flashcards' && cards.length > 0 && (
+        {!modoFoco && activeTab === "flashcards" && cards.length > 0 && (
           <View style={styles.concluirRow}>
             <Button onPress={handleConcluir} disabled={saving} style={styles.concluirBtn}>
               <Feather name="check-circle" size={18} color={colors.primaryForeground} />
-              <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>
+              <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
                 Concluir tópico
               </ThemedText>
             </Button>
@@ -505,23 +602,56 @@ export default function MaterialStudyScreen() {
         )}
 
         {!modoFoco && dueForReview && (
-          <View style={[styles.reviewBanner, { backgroundColor: colors.primary + '20', borderColor: colors.primary + '40', borderWidth: borderW, padding: 16 * spacingScale, marginBottom: 16 * spacingScale }]}>
+          <View
+            style={[
+              styles.reviewBanner,
+              {
+                backgroundColor: colors.primary + "20",
+                borderColor: colors.primary + "40",
+                borderWidth: borderW,
+                padding: 16 * spacingScale,
+                marginBottom: 16 * spacingScale,
+              },
+            ]}
+          >
             <ThemedText style={[styles.reviewBannerText, { color: colors.primary }]}>
               Marque como revisado para atualizar a próxima revisão.
             </ThemedText>
-            <Button variant="outline" onPress={handleMarkAsReviewed} disabled={saving} style={styles.reviewBtn}>
+            <Button
+              variant="outline"
+              onPress={handleMarkAsReviewed}
+              disabled={saving}
+              style={styles.reviewBtn}
+            >
               Marquei como revisado
             </Button>
           </View>
         )}
 
         {!modoFoco && resumoText ? (
-          <View style={[styles.resumoBlock, { borderColor: colors.border, borderWidth: borderW, backgroundColor: colors.muted + '40', padding: 16 * spacingScale, marginBottom: 20 * spacingScale }]}>
+          <View
+            style={[
+              styles.resumoBlock,
+              {
+                borderColor: colors.border,
+                borderWidth: borderW,
+                backgroundColor: colors.muted + "40",
+                padding: 16 * spacingScale,
+                marginBottom: 20 * spacingScale,
+              },
+            ]}
+          >
             <View style={styles.resumoRowHeader}>
               <ThemedText style={[styles.resumosTitle, { color: colors.mutedForeground }]}>
                 Resumo
               </ThemedText>
-              <TouchableOpacity onPress={() => { setEditResumoValue(resumoText); setEditResumoOpen(true); }} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditResumoValue(resumoText);
+                  setEditResumoOpen(true);
+                }}
+                hitSlop={8}
+              >
                 <Feather name="edit-2" size={18} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
@@ -529,8 +659,20 @@ export default function MaterialStudyScreen() {
           </View>
         ) : !modoFoco ? (
           <TouchableOpacity
-            style={[styles.addResumoBtn, { borderColor: colors.border, borderWidth: borderW, gap: 8 * spacingScale, padding: 16 * spacingScale, marginBottom: 20 * spacingScale }]}
-            onPress={() => { setEditResumoValue(''); setEditResumoOpen(true); }}
+            style={[
+              styles.addResumoBtn,
+              {
+                borderColor: colors.border,
+                borderWidth: borderW,
+                gap: 8 * spacingScale,
+                padding: 16 * spacingScale,
+                marginBottom: 20 * spacingScale,
+              },
+            ]}
+            onPress={() => {
+              setEditResumoValue("");
+              setEditResumoOpen(true);
+            }}
           >
             <Feather name="plus" size={18} color={colors.mutedForeground} />
             <ThemedText style={[styles.addResumoText, { color: colors.mutedForeground }]}>
@@ -540,72 +682,60 @@ export default function MaterialStudyScreen() {
         ) : null}
 
         {!modoFoco && (
-        <View style={[styles.tabStrip, { backgroundColor: colors.muted + '80', gap: 4 * spacingScale, padding: 4 * spacingScale, marginBottom: 20 * spacingScale }]}>
-          {tabs.map((t) => (
-            <TouchableOpacity
-              key={t.key}
-              style={[styles.tab, activeTab === t.key && { backgroundColor: colors.primary }]}
-              onPress={() => setActiveTab(t.key)}
-              activeOpacity={0.8}
-            >
-              <Feather
-                name={t.icon}
-                size={18}
-                color={activeTab === t.key ? colors.primaryForeground : colors.mutedForeground}
-              />
-              <ThemedText
+          <View
+            style={[
+              styles.tabStrip,
+              {
+                backgroundColor: colors.muted + "80",
+                gap: 8 * spacingScale,
+                padding: 8 * spacingScale,
+                marginBottom: 20 * spacingScale,
+              },
+            ]}
+          >
+            {tabs.map((t) => (
+              <TouchableOpacity
+                key={t.key}
                 style={[
-                  styles.tabLabel,
-                  { color: activeTab === t.key ? colors.primaryForeground : colors.mutedForeground },
+                  styles.tab,
+                  { width: tabItemWidth, maxWidth: tabItemWidth },
+                  activeTab === t.key && { backgroundColor: colors.primary },
                 ]}
-                numberOfLines={1}
+                onPress={() => setActiveTab(t.key)}
+                activeOpacity={0.8}
               >
-                {t.label}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
-        )}
-
-        {activeTab === 'revisar' && cardsDue.length === 0 && (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: borderW, padding: 24 * spacingScale, gap: 16 * spacingScale }]}>
-            <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Nenhum card para revisar hoje neste tópico. Todos em dia!
-            </ThemedText>
-            <ThemedText style={[styles.emptyText, { color: colors.mutedForeground, fontSize: 14 }]}>
-              Classifique cards na tela de Revisão (Biblioteca) para agendar a próxima revisão.
-            </ThemedText>
-            <Button variant="outline" onPress={() => router.back()}>Voltar ao projeto</Button>
+                <Feather
+                  name={t.icon}
+                  size={18}
+                  color={activeTab === t.key ? colors.primaryForeground : colors.mutedForeground}
+                />
+                <ThemedText
+                  style={[
+                    styles.tabLabel,
+                    {
+                      color:
+                        activeTab === t.key ? colors.primaryForeground : colors.mutedForeground,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t.label}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
-        {activeTab === 'revisar' && cardsDue.length > 0 && (
-          <>
-            <FlashcardCarousel
-              cards={cardsDue}
-              cardIndex={revisarCardIndex}
-              onCardIndexChange={setRevisarCardIndex}
-              flipped={revisarFlipped}
-              onFlippedChange={setRevisarFlipped}
-              mode="material"
-              footerText={`${cardsDue.length} card${cardsDue.length !== 1 ? 's' : ''} para revisar · Clique para ver a resposta`}
-            />
-            <View style={[styles.backBtnWrap, { marginTop: 24 * spacingScale }]}>
-              <Button variant="outline" onPress={() => router.back()}>
-                Voltar ao projeto
-              </Button>
-            </View>
-          </>
-        )}
-        {activeTab === 'quiz' && (
+
+        {activeTab === "quiz" && (
           <StudyQuizPanel cards={cards} emptyText="Nenhum card para quiz neste tópico." />
         )}
-        {activeTab === 'chat' && (
+        {activeTab === "chat" && (
           <StudyChat
             headerText="Pergunte sobre este tópico. A IA usa o resumo como contexto."
-            buildContext={() => resumoText || 'Sem resumo.'}
+            buildContext={() => resumoText || "Sem resumo."}
           />
         )}
-        {activeTab === 'minhas_questoes' && (
+        {activeTab === "minhas_questoes" && (
           <MaterialFlashcardEditor
             cards={cards}
             saving={saving}
@@ -613,15 +743,28 @@ export default function MaterialStudyScreen() {
             onDeleteCard={handleDeleteCard}
           />
         )}
-        {activeTab === 'flashcards' && cards.length === 0 && (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: borderW, padding: 24 * spacingScale, gap: 16 * spacingScale }]}>
+        {activeTab === "flashcards" && cards.length === 0 && (
+          <View
+            style={[
+              styles.emptyCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderWidth: borderW,
+                padding: 24 * spacingScale,
+                gap: 16 * spacingScale,
+              },
+            ]}
+          >
             <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
               Nenhum card neste tópico. Crie flashcards em &quot;Minhas flashcards&quot;.
             </ThemedText>
-            <Button variant="outline" onPress={() => router.back()}>Voltar ao projeto</Button>
+            <Button variant="outline" onPress={() => router.back()}>
+              Voltar ao projeto
+            </Button>
           </View>
         )}
-        {activeTab === 'flashcards' && cards.length > 0 && (
+        {activeTab === "flashcards" && cards.length > 0 && (
           <>
             <FlashcardCarousel
               cards={cards}
@@ -642,14 +785,24 @@ export default function MaterialStudyScreen() {
 
       <Modal visible={editResumoOpen} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => !saving && setEditResumoOpen(false)}>
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalBox, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <ThemedText style={styles.modalTitle}>Editar resumo</ThemedText>
             <TextInput
               value={editResumoValue}
               onChangeText={setEditResumoValue}
               placeholder="Resumo..."
               multiline
-              style={[styles.textArea, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
+              ]}
               placeholderTextColor={colors.mutedForeground}
             />
             <View style={styles.modalActions}>
@@ -657,7 +810,7 @@ export default function MaterialStudyScreen() {
                 Cancelar
               </Button>
               <Button onPress={handleSaveResumo} disabled={saving}>
-                {saving ? 'Salvando...' : 'Salvar'}
+                {saving ? "Salvando..." : "Salvar"}
               </Button>
             </View>
           </Pressable>
@@ -671,56 +824,104 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16 },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 48 },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 48 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 },
   backText: { fontSize: 14 },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
+  title: { fontSize: 22, fontWeight: "700", marginBottom: 4 },
   meta: { fontSize: 14, marginBottom: 8 },
   timerRow: { marginBottom: 12 },
-  timerAndFocoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  focoBtn: { alignSelf: 'flex-start' },
+  timerAndFocoRow: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
+  focoBtn: { alignSelf: "flex-start" },
   reminderBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
     marginBottom: 12,
   },
-  reminderText: { fontSize: 14, fontWeight: '500' },
+  reminderText: { fontSize: 14, fontWeight: "500" },
   pomodoroBlock: {
     padding: 20,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 12,
   },
-  pomodoroTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  pomodoroTime: { fontVariant: ['tabular-nums'], fontSize: 24, fontWeight: '700' },
-  notFoundText: { marginBottom: 16, textAlign: 'center' },
+  pomodoroTitle: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
+  pomodoroTime: { fontVariant: ["tabular-nums"], fontSize: 24, fontWeight: "700" },
+  notFoundText: { marginBottom: 16, textAlign: "center" },
   concluirRow: { marginBottom: 12 },
-  concluirBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  concluirBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
   reviewBanner: { borderRadius: 12, borderWidth: 1, padding: 16, marginBottom: 16 },
   reviewBannerText: { fontSize: 14, marginBottom: 12 },
-  reviewBtn: { alignSelf: 'flex-start' },
+  reviewBtn: { alignSelf: "flex-start" },
   resumoBlock: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 20 },
-  resumoRowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  resumosTitle: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase' },
+  resumoRowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  resumosTitle: { fontSize: 12, fontWeight: "600", textTransform: "uppercase" },
   resumoText: { fontSize: 14, lineHeight: 20 },
-  addResumoBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, marginBottom: 20 },
+  addResumoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 12,
+    marginBottom: 20,
+  },
   addResumoText: { fontSize: 14 },
-  tabStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, padding: 4, borderRadius: 10, marginBottom: 20 },
-  tab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
-  tabLabel: { fontSize: 13, fontWeight: '500' },
-  emptyCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center', gap: 16 },
-  emptyText: { textAlign: 'center' },
-  backBtnWrap: { marginTop: 24, alignItems: 'center' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
-  modalBox: { borderRadius: 12, padding: 20, maxHeight: '90%' },
-  modalCardPausa: { borderRadius: 12, padding: 24, borderWidth: 1, alignSelf: 'center', minWidth: 280 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  tabStrip: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+    gap: 8,
+    padding: 8,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  tab: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  tabLabel: { fontSize: 13, fontWeight: "500" },
+  emptyCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: "center", gap: 16 },
+  emptyText: { textAlign: "center" },
+  backBtnWrap: { marginTop: 24, alignItems: "center" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalBox: { borderRadius: 12, padding: 20, maxHeight: "90%" },
+  modalCardPausa: {
+    borderRadius: 12,
+    padding: 24,
+    borderWidth: 1,
+    alignSelf: "center",
+    minWidth: 280,
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
   modalHint: { fontSize: 14, marginBottom: 8 },
-  textArea: { minHeight: 200, borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16 },
-  modalActions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
+  textArea: {
+    minHeight: 200,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalActions: { flexDirection: "row", gap: 12, justifyContent: "flex-end" },
 });

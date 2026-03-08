@@ -9,7 +9,7 @@ export type ProjectCard = {
   intervalLevel?: number;
 };
 
-export type MaterialStatus = 'pending' | 'in_progress' | 'completed';
+export type MaterialStatus = "pending" | "in_progress" | "completed";
 
 export type Material = {
   id: string;

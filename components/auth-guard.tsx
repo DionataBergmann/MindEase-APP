@@ -1,20 +1,20 @@
-import React, { useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import { useAuthState } from '@/hooks/use-auth-state';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import React, { useEffect } from "react";
+import { useRouter } from "expo-router";
+import { View, StyleSheet, ActivityIndicator } from "react-native";
+import { useAuthState } from "@/hooks/use-auth-state";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, checking } = useAuthState();
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
 
   useEffect(() => {
     if (checking) return;
     if (!user) {
-      router.replace('/login');
+      router.replace("/login");
     }
   }, [checking, user, router]);
 
@@ -36,7 +36,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
