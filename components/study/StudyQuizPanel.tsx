@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { ThemedText } from '@/components/themed-text';
-import { Button } from '@/components/atoms/Button';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import type { ProjectCard } from '@/types/project';
+import React, { useMemo, useState } from "react";
+import { View, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { ThemedText } from "@/components/themed-text";
+import { Button } from "@/components/atoms/Button";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
+import type { ProjectCard } from "@/types/project";
 
 type QuizItem = { question: string; correctAnswer: string; options: string[] };
 
@@ -35,7 +35,7 @@ export type StudyQuizPanelProps = {
 };
 
 export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
 
   const quizItems = useMemo(() => buildQuizItems(cards), [cards]);
@@ -54,7 +54,12 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
   const isQuizEnd = quizStarted && quizItems.length > 0 && quizIndex >= quizItems.length;
 
   React.useEffect(() => {
-    if (!quizAnswered || !quizCorrect || quizItems.length === 0 || quizIndex >= quizItems.length - 1)
+    if (
+      !quizAnswered ||
+      !quizCorrect ||
+      quizItems.length === 0 ||
+      quizIndex >= quizItems.length - 1
+    )
       return;
     const t1 = setTimeout(() => setQuizNextLoading(true), 1500);
     const t2 = setTimeout(() => {
@@ -70,19 +75,25 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
 
   if (cards.length === 0) {
     return (
-      <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>{emptyText}</ThemedText>
+      <View
+        style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+      >
+        <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
+          {emptyText}
+        </ThemedText>
       </View>
     );
   }
 
   if (!quizStarted) {
     return (
-      <View style={[styles.startCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View
+        style={[styles.startCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+      >
         <Feather name="help-circle" size={48} color={colors.primary} style={styles.startIcon} />
         <ThemedText style={styles.startTitle}>Quiz</ThemedText>
         <ThemedText style={[styles.startSubtitle, { color: colors.mutedForeground }]}>
-          {quizItems.length} pergunta{quizItems.length !== 1 ? 's' : ''} com múltipla escolha.
+          {quizItems.length} pergunta{quizItems.length !== 1 ? "s" : ""} com múltipla escolha.
         </ThemedText>
         <Button
           onPress={() => {
@@ -129,7 +140,9 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-      <View style={[styles.questionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View
+        style={[styles.questionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+      >
         <ThemedText style={[styles.questionMeta, { color: colors.mutedForeground }]}>
           Pergunta {quizIndex + 1} de {quizItems.length}
         </ThemedText>
@@ -141,10 +154,10 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
             const showResult = quizAnswered;
             const variant =
               showResult && isCorrect
-                ? 'default'
+                ? "default"
                 : showResult && isSelected && !isCorrect
-                  ? 'destructive'
-                  : 'outline';
+                  ? "destructive"
+                  : "outline";
             return (
               <Button
                 key={i}
@@ -155,16 +168,19 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
                   setQuizSelectedIndex(i);
                   if (opt === currentQuiz.correctAnswer) setQuizScore((s) => s + 1);
                 }}
-                style={[styles.optionBtn, variant === 'default' && { backgroundColor: colors.primary }]}
+                style={[
+                  styles.optionBtn,
+                  variant === "default" && { backgroundColor: colors.primary },
+                ]}
               >
                 <ThemedText
                   style={[
                     styles.optionText,
                     {
                       color:
-                        variant === 'default'
+                        variant === "default"
                           ? colors.primaryForeground
-                          : variant === 'destructive'
+                          : variant === "destructive"
                             ? colors.destructiveForeground
                             : colors.foreground,
                     },
@@ -184,12 +200,17 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
           style={[
             styles.feedback,
             {
-              backgroundColor: quizCorrect ? colors.primary + '20' : colors.destructive + '20',
+              backgroundColor: quizCorrect ? colors.primary + "20" : colors.destructive + "20",
             },
           ]}
         >
-          <ThemedText style={[styles.feedbackText, { color: quizCorrect ? colors.primary : colors.destructive }]}>
-            {quizCorrect ? 'Correto!' : `Resposta correta: ${currentQuiz.correctAnswer}`}
+          <ThemedText
+            style={[
+              styles.feedbackText,
+              { color: quizCorrect ? colors.primary : colors.destructive },
+            ]}
+          >
+            {quizCorrect ? "Correto!" : `Resposta correta: ${currentQuiz.correctAnswer}`}
           </ThemedText>
         </View>
       )}
@@ -215,7 +236,7 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
             style={styles.navBtn}
           >
             <Feather name="chevron-left" size={18} color={colors.primary} />
-            <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Anterior</ThemedText>
+            <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>Anterior</ThemedText>
           </Button>
           <Button
             variant="outline"
@@ -225,7 +246,7 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
             }}
             style={styles.navBtn}
           >
-            <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Próxima</ThemedText>
+            <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>Próxima</ThemedText>
             <Feather name="chevron-right" size={18} color={colors.primary} />
           </Button>
         </View>
@@ -237,27 +258,33 @@ export function StudyQuizPanel({ cards, emptyText }: StudyQuizPanelProps) {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  emptyCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center' },
-  emptyText: { textAlign: 'center' },
-  startCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center' },
+  emptyCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: "center" },
+  emptyText: { textAlign: "center" },
+  startCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: "center" },
   startIcon: { marginBottom: 16 },
-  startTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
-  startSubtitle: { fontSize: 14, marginBottom: 20, textAlign: 'center' },
-  endCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center' },
+  startTitle: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
+  startSubtitle: { fontSize: 14, marginBottom: 20, textAlign: "center" },
+  endCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: "center" },
   endIcon: { marginBottom: 16 },
-  endTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
-  endScore: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+  endTitle: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
+  endScore: { fontSize: 24, fontWeight: "700", marginBottom: 4 },
   endSubtitle: { fontSize: 14, marginBottom: 20 },
   questionCard: { borderRadius: 12, borderWidth: 1, padding: 20, marginBottom: 16 },
   questionMeta: { fontSize: 12, marginBottom: 8 },
-  questionText: { fontSize: 18, fontWeight: '600', marginBottom: 16 },
+  questionText: { fontSize: 18, fontWeight: "600", marginBottom: 16 },
   options: { gap: 10 },
-  optionBtn: { alignItems: 'flex-start', minHeight: 48, paddingVertical: 12 },
-  optionText: { textAlign: 'left' },
+  optionBtn: { alignItems: "flex-start", minHeight: 48, paddingVertical: 12 },
+  optionText: { textAlign: "left" },
   feedback: { borderRadius: 8, padding: 16, marginBottom: 12 },
-  feedbackText: { fontWeight: '500' },
-  nextLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16 },
+  feedbackText: { fontWeight: "500" },
+  nextLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
   nextLoadingText: { fontSize: 14 },
-  navButtons: { flexDirection: 'row', gap: 16 },
-  navBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  navButtons: { flexDirection: "row", gap: 16 },
+  navBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
 });

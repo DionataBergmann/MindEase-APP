@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, Pressable, TextInput } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { Button } from '@/components/atoms/Button';
+import React, { useState, useEffect, useRef } from "react";
+import { View, StyleSheet, TouchableOpacity, Modal, Pressable, TextInput } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { ThemedText } from "@/components/themed-text";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
+import { Button } from "@/components/atoms/Button";
 
 export type StudyTimerProps = {
   /** Duração inicial em minutos */
@@ -18,18 +18,25 @@ export type StudyTimerProps = {
 function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export function StudyTimer({ initialMinutes, onComplete, editable, onMinutesChange }: StudyTimerProps) {
-  const scheme = useColorScheme() ?? 'light';
+export function StudyTimer({
+  initialMinutes,
+  onComplete,
+  editable,
+  onMinutesChange,
+}: StudyTimerProps) {
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
   const [secondsRemaining, setSecondsRemaining] = useState(initialMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editMinutes, setEditMinutes] = useState(String(initialMinutes));
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     setSecondsRemaining(initialMinutes * 60);
@@ -82,56 +89,75 @@ export function StudyTimer({ initialMinutes, onComplete, editable, onMinutesChan
       <View
         style={[
           styles.wrapper,
-          { backgroundColor: colors.primary + '26', borderColor: colors.primary + '40' },
+          { backgroundColor: colors.primary + "26", borderColor: colors.primary + "40" },
         ]}
       >
-        <TouchableOpacity onPress={openModal} disabled={!editable || isRunning} activeOpacity={editable && !isRunning ? 0.7 : 1}>
+        <TouchableOpacity
+          onPress={openModal}
+          disabled={!editable || isRunning}
+          activeOpacity={editable && !isRunning ? 0.7 : 1}
+        >
           <ThemedText style={[styles.time, { color: colors.foreground }]}>
             {formatTime(secondsRemaining)}
           </ThemedText>
         </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => setIsRunning((v) => !v)}
-        style={[styles.iconBtn, { backgroundColor: colors.primary + '30' }]}
-        activeOpacity={0.8}
-      >
-        <Feather
-          name={isRunning ? 'pause' : 'play'}
-          size={18}
-          color={colors.foreground}
-        />
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={handleReset}
-        style={[styles.iconBtn, { backgroundColor: colors.primary + '30' }]}
-        activeOpacity={0.8}
-      >
-        <Feather name="rotate-ccw" size={18} color={colors.foreground} />
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          onPress={() => setIsRunning((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: colors.primary + "30" }]}
+          activeOpacity={0.8}
+        >
+          <Feather name={isRunning ? "pause" : "play"} size={18} color={colors.foreground} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleReset}
+          style={[styles.iconBtn, { backgroundColor: colors.primary + "30" }]}
+          activeOpacity={0.8}
+        >
+          <Feather name="rotate-ccw" size={18} color={colors.foreground} />
+        </TouchableOpacity>
+      </View>
 
       {modalOpen && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalOverlay} onPress={() => setModalOpen(false)}>
-            <Pressable style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
-              <ThemedText style={[styles.modalTitle, { color: colors.foreground }]}>Editar duração do timer</ThemedText>
+            <Pressable
+              style={[
+                styles.modalCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <ThemedText style={[styles.modalTitle, { color: colors.foreground }]}>
+                Editar duração do timer
+              </ThemedText>
               <ThemedText style={[styles.modalHint, { color: colors.mutedForeground }]}>
                 Defina por quantos minutos quer estudar (1 a 120).
               </ThemedText>
               <TextInput
                 value={editMinutes}
-                onChangeText={(t) => setEditMinutes(t.replace(/\D/g, '').slice(0, 3))}
+                onChangeText={(t) => setEditMinutes(t.replace(/\D/g, "").slice(0, 3))}
                 keyboardType="number-pad"
                 placeholder="Ex.: 25"
-                style={[styles.modalInput, { backgroundColor: colors.muted + '80', color: colors.foreground, borderColor: colors.border }]}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: colors.muted + "80",
+                    color: colors.foreground,
+                    borderColor: colors.border,
+                  },
+                ]}
                 placeholderTextColor={colors.mutedForeground}
               />
               <View style={styles.modalActions}>
                 <Button variant="outline" onPress={() => setModalOpen(false)}>
-                  <ThemedText style={{ color: colors.foreground, fontWeight: '600' }}>Cancelar</ThemedText>
+                  <ThemedText style={{ color: colors.foreground, fontWeight: "600" }}>
+                    Cancelar
+                  </ThemedText>
                 </Button>
                 <Button onPress={handleApply}>
-                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Aplicar</ThemedText>
+                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
+                    Aplicar
+                  </ThemedText>
                 </Button>
               </View>
             </Pressable>
@@ -144,9 +170,9 @@ export function StudyTimer({ initialMinutes, onComplete, editable, onMinutesChan
 
 const styles = StyleSheet.create({
   wrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -154,9 +180,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   time: {
-    fontVariant: ['tabular-nums'],
+    fontVariant: ["tabular-nums"],
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     minWidth: 44,
   },
   iconBtn: {
@@ -165,13 +191,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   modalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 320,
     borderRadius: 12,
     borderWidth: 1,
@@ -179,7 +205,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   modalHint: {
@@ -195,8 +221,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
 });

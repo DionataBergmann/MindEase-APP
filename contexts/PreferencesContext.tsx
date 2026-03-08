@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
-import { getPreferences, type UserPreferences } from '@/lib/preferences';
+import React, { createContext, useCallback, useContext, useState, useEffect } from "react";
+import { getPreferences, type UserPreferences } from "@/lib/preferences";
 
 type PreferencesContextValue = {
   prefs: UserPreferences | null;
@@ -8,7 +8,7 @@ type PreferencesContextValue = {
   /** Scale for spacing (padding, margin, gap): normal=1, amplo=1.25 */
   spacingScale: number;
   /** Contrast: normal=1, alto=2 (e.g. border width multiplier) */
-  contrastLevel: 'normal' | 'alto';
+  contrastLevel: "normal" | "alto";
   /** When true, animations should be instant or disabled (flashcard flip, slide, etc.) */
   reducedAnimations: boolean;
   /** Reload prefs from storage (call after updating in profile). */
@@ -17,8 +17,8 @@ type PreferencesContextValue = {
 
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 
-const FONT_SCALE: Record<'P' | 'M' | 'G', number> = { P: 0.9, M: 1, G: 1.15 };
-const SPACING_SCALE: Record<'normal' | 'amplo', number> = { normal: 1, amplo: 1.5 };
+const FONT_SCALE: Record<"P" | "M" | "G", number> = { P: 0.9, M: 1, G: 1.15 };
+const SPACING_SCALE: Record<"normal" | "amplo", number> = { normal: 1, amplo: 1.5 };
 
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
@@ -34,8 +34,8 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   const fontScale = prefs ? (FONT_SCALE[prefs.tamanhoFonte] ?? 1) : 1;
   const spacingScale = prefs ? (SPACING_SCALE[prefs.espacamento] ?? 1) : 1;
-  const contrastLevel = (prefs?.contraste === 'alto' ? 'alto' : 'normal') as 'normal' | 'alto';
-  const reducedAnimations = prefs?.animacoes === 'reduzidas';
+  const contrastLevel = (prefs?.contraste === "alto" ? "alto" : "normal") as "normal" | "alto";
+  const reducedAnimations = prefs?.animacoes === "reduzidas";
 
   const value: PreferencesContextValue = {
     prefs,
@@ -46,11 +46,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     refresh,
   };
 
-  return (
-    <PreferencesContext.Provider value={value}>
-      {children}
-    </PreferencesContext.Provider>
-  );
+  return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }
 
 export function usePreferencesContext(): PreferencesContextValue | null {
@@ -67,9 +63,9 @@ export function useSpacingScale(): number {
   return ctx?.spacingScale ?? 1;
 }
 
-export function useContrastLevel(): 'normal' | 'alto' {
+export function useContrastLevel(): "normal" | "alto" {
   const ctx = usePreferencesContext();
-  return ctx?.contrastLevel ?? 'normal';
+  return ctx?.contrastLevel ?? "normal";
 }
 
 export function useReducedAnimations(): boolean {

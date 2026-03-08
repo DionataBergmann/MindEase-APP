@@ -1,30 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Image } from 'expo-image';
-import { createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Input, Button } from '@/components/atoms';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { signupSchema, type SignupFormData } from './signupSchema';
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Image } from "expo-image";
+import { createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Input, Button } from "@/components/atoms";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { signupSchema, type SignupFormData } from "./signupSchema";
 
 function getAuthErrorMessage(code: string): string {
-  if (code === 'auth/email-already-in-use') return 'Este e-mail já está em uso. Tente fazer login.';
-  if (code === 'auth/weak-password') return 'A senha é muito fraca. Use no mínimo 6 caracteres.';
-  if (code === 'auth/invalid-email') return 'E-mail inválido.';
-  return 'Não foi possível criar a conta. Tente novamente.';
+  if (code === "auth/email-already-in-use") return "Este e-mail já está em uso. Tente fazer login.";
+  if (code === "auth/weak-password") return "A senha é muito fraca. Use no mínimo 6 caracteres.";
+  if (code === "auth/invalid-email") return "E-mail inválido.";
+  return "Não foi possível criar a conta. Tente novamente.";
 }
 
 export function SignupForm() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -37,7 +37,7 @@ export function SignupForm() {
     }
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.replace('/');
+        router.replace("/");
         return;
       }
       setCheckingAuth(false);
@@ -52,10 +52,10 @@ export function SignupForm() {
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -63,7 +63,7 @@ export function SignupForm() {
     setFirebaseError(null);
     const auth = getFirebaseAuth();
     if (!auth) {
-      setFirebaseError('Firebase não está configurado. Verifique as variáveis de ambiente.');
+      setFirebaseError("Firebase não está configurado. Verifique as variáveis de ambiente.");
       return;
     }
     try {
@@ -71,9 +71,10 @@ export function SignupForm() {
       if (data.name?.trim() && userCredential.user) {
         await updateProfile(userCredential.user, { displayName: data.name.trim() });
       }
-      router.replace('/');
+      router.replace("/");
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : '';
+      const code =
+        err && typeof err === "object" && "code" in err ? (err as { code: string }).code : "";
       setFirebaseError(getAuthErrorMessage(code));
     }
   }
@@ -88,7 +89,7 @@ export function SignupForm() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.flex}
     >
       <ScrollView
@@ -104,7 +105,7 @@ export function SignupForm() {
             MindEase
           </ThemedText>
           <Image
-            source={require('@/assets/login-illustration.png')}
+            source={require("@/assets/login-illustration.png")}
             style={styles.illustration}
             contentFit="contain"
             accessibilityLabel=""
@@ -112,12 +113,12 @@ export function SignupForm() {
           <ThemedText type="subtitle" style={[styles.heading, { color: colors.primary }]}>
             Criar conta
           </ThemedText>
-          <ThemedText style={styles.lead}>
-            Preencha os dados abaixo para começar.
-          </ThemedText>
+          <ThemedText style={styles.lead}>Preencha os dados abaixo para começar.</ThemedText>
 
           <View style={styles.form}>
-            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>Nome</ThemedText>
+            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>
+              Nome
+            </ThemedText>
             <Controller
               control={control}
               name="name"
@@ -133,7 +134,9 @@ export function SignupForm() {
               )}
             />
 
-            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>E-mail</ThemedText>
+            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>
+              E-mail
+            </ThemedText>
             <Controller
               control={control}
               name="email"
@@ -151,10 +154,14 @@ export function SignupForm() {
               )}
             />
             {errors.email ? (
-              <ThemedText style={[styles.error, { color: colors.destructive }]}>{errors.email.message}</ThemedText>
+              <ThemedText style={[styles.error, { color: colors.destructive }]}>
+                {errors.email.message}
+              </ThemedText>
             ) : null}
 
-            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>Senha</ThemedText>
+            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>
+              Senha
+            </ThemedText>
             <Controller
               control={control}
               name="password"
@@ -171,10 +178,14 @@ export function SignupForm() {
               )}
             />
             {errors.password ? (
-              <ThemedText style={[styles.error, { color: colors.destructive }]}>{errors.password.message}</ThemedText>
+              <ThemedText style={[styles.error, { color: colors.destructive }]}>
+                {errors.password.message}
+              </ThemedText>
             ) : null}
 
-            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>Confirmar senha</ThemedText>
+            <ThemedText style={[styles.label, { color: colors.foreground, opacity: 0.9 }]}>
+              Confirmar senha
+            </ThemedText>
             <Controller
               control={control}
               name="confirmPassword"
@@ -191,11 +202,15 @@ export function SignupForm() {
               )}
             />
             {errors.confirmPassword ? (
-              <ThemedText style={[styles.error, { color: colors.destructive }]}>{errors.confirmPassword.message}</ThemedText>
+              <ThemedText style={[styles.error, { color: colors.destructive }]}>
+                {errors.confirmPassword.message}
+              </ThemedText>
             ) : null}
 
             {firebaseError ? (
-              <ThemedText style={[styles.error, { color: colors.destructive }]}>{firebaseError}</ThemedText>
+              <ThemedText style={[styles.error, { color: colors.destructive }]}>
+                {firebaseError}
+              </ThemedText>
             ) : null}
 
             <Button
@@ -204,13 +219,13 @@ export function SignupForm() {
               loading={isSubmitting}
               style={styles.submitBtn}
             >
-              {isSubmitting ? 'Criando conta…' : 'Criar conta'}
+              {isSubmitting ? "Criando conta…" : "Criar conta"}
             </Button>
           </View>
 
           <View style={styles.footer}>
             <ThemedText style={styles.footerText}>Já tem conta? </ThemedText>
-            <Button variant="link" onPress={() => router.push('/login')}>
+            <Button variant="link" onPress={() => router.push("/login")}>
               Entrar
             </Button>
           </View>
@@ -224,16 +239,28 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1, padding: 24, paddingBottom: 16 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { maxWidth: 400, width: '100%', alignSelf: 'center' },
-  brand: { textAlign: 'center', marginBottom: 8 },
-  illustration: { width: '100%', maxWidth: 200, height: 140, alignSelf: 'center', marginBottom: 16 },
-  heading: { textAlign: 'center', marginBottom: 4 },
-  lead: { textAlign: 'center', marginBottom: 24, opacity: 0.9 },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center" },
+  container: { maxWidth: 400, width: "100%", alignSelf: "center" },
+  brand: { textAlign: "center", marginBottom: 8 },
+  illustration: {
+    width: "100%",
+    maxWidth: 200,
+    height: 140,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  heading: { textAlign: "center", marginBottom: 4 },
+  lead: { textAlign: "center", marginBottom: 24, opacity: 0.9 },
   form: { gap: 12, marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: -10 },
-  error: { fontSize: 14, fontWeight: '500' },
-  submitBtn: { width: '100%', marginTop: 8 },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginTop: -10 },
+  label: { fontSize: 14, fontWeight: "500", marginBottom: -10 },
+  error: { fontSize: 14, fontWeight: "500" },
+  submitBtn: { width: "100%", marginTop: 8 },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginTop: -10,
+  },
   footerText: { marginRight: 4 },
 });

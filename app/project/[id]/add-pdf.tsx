@@ -1,40 +1,33 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  StyleSheet,
-  ScrollView,
-  View,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
-import Feather from '@expo/vector-icons/Feather';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { getFirebaseAuth, getFirestoreDb } from '@/lib/firebase';
+import React, { useState, useCallback, useEffect } from "react";
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import Feather from "@expo/vector-icons/Feather";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 import {
   processSources,
   getTopicDisplayNameWithPdfNames,
   isPdfExtractionAvailable,
   type ImageSource,
   type PdfSource,
-} from '@/lib/content-processing';
-import type { ProcessContentResponse } from '@/types/process-content';
-import type { Material } from '@/types/project';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/atoms/Button';
-import { UploadSourcesForm, ProcessedResultsList } from '@/components/upload';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+} from "@/lib/content-processing";
+import type { ProcessContentResponse } from "@/types/process-content";
+import type { Material } from "@/types/project";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/atoms/Button";
+import { UploadSourcesForm, ProcessedResultsList } from "@/components/upload";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
 
 export default function AddPdfScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
 
   const [pdfSources, setPdfSources] = useState<PdfSource[]>([]);
@@ -52,26 +45,28 @@ export default function AddPdfScreen() {
 
   const imageCount = imageSources.filter((s) => s.base64).length;
   const topicCount = mergeAllIntoOne
-    ? (pdfSources.length + imageCount > 0 ? 1 : 0)
+    ? pdfSources.length + imageCount > 0
+      ? 1
+      : 0
     : pdfSources.length + imageCount;
 
   const pickPdfs = useCallback(async () => {
     const available = await isPdfExtractionAvailable();
     if (!available) {
       setError(
-        'PDF requer um build de desenvolvimento (não funciona no Expo Go). Rode: npx expo run:ios ou npx expo run:android.'
+        "PDF requer um build de desenvolvimento (não funciona no Expo Go). Rode: npx expo run:ios ou npx expo run:android."
       );
       return;
     }
     const result = await DocumentPicker.getDocumentAsync({
-      type: 'application/pdf',
+      type: "application/pdf",
       copyToCacheDirectory: true,
       multiple: true,
     });
     if (result.canceled) return;
     const newPdfs: PdfSource[] = result.assets.map((a) => ({
       uri: a.uri,
-      name: a.name ?? 'documento.pdf',
+      name: a.name ?? "documento.pdf",
     }));
     setPdfSources((prev) => [...prev, ...newPdfs]);
     setResults([]);
@@ -80,12 +75,12 @@ export default function AddPdfScreen() {
 
   const pickImages = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setError('Permissão para acessar a galeria é necessária.');
+    if (status !== "granted") {
+      setError("Permissão para acessar a galeria é necessária.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsMultipleSelection: true,
       quality: 0.9,
       base64: true,
@@ -102,31 +97,28 @@ export default function AddPdfScreen() {
 
   const openCamera = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      setError('Permissão para usar a câmera é necessária.');
+    if (status !== "granted") {
+      setError("Permissão para usar a câmera é necessária.");
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       quality: 0.9,
       base64: true,
     });
     if (result.canceled) return;
     const asset = result.assets[0];
     if (!asset) return;
-    setImageSources((prev) => [
-      ...prev,
-      { uri: asset.uri, base64: asset.base64 ?? undefined },
-    ]);
+    setImageSources((prev) => [...prev, { uri: asset.uri, base64: asset.base64 ?? undefined }]);
     setResults([]);
     setError(null);
   }, []);
 
   const showPhotoOptions = useCallback(() => {
-    Alert.alert('Adicionar foto', 'Tirar foto ou escolher da galeria?', [
-      { text: 'Tirar foto', onPress: openCamera },
-      { text: 'Escolher da galeria', onPress: pickImages },
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert("Adicionar foto", "Tirar foto ou escolher da galeria?", [
+      { text: "Tirar foto", onPress: openCamera },
+      { text: "Escolher da galeria", onPress: pickImages },
+      { text: "Cancelar", style: "cancel" },
     ]);
   }, [openCamera, pickImages]);
 
@@ -150,7 +142,7 @@ export default function AddPdfScreen() {
 
   const handleProcess = useCallback(async () => {
     if (topicCount === 0) {
-      setError('Adicione PDFs e/ou fotos.');
+      setError("Adicione PDFs e/ou fotos.");
       return;
     }
     setError(null);
@@ -165,7 +157,7 @@ export default function AddPdfScreen() {
       setProcessingIndex(null);
       setResults(allResults);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao processar.');
+      setError(err instanceof Error ? err.message : "Erro ao processar.");
       setProcessingIndex(null);
     }
   }, [pdfSources, imageSources, mergeAllIntoOne, topicCount]);
@@ -176,16 +168,16 @@ export default function AddPdfScreen() {
     const db = getFirestoreDb();
     const user = auth?.currentUser;
     if (!user || !db) {
-      setError('Faça login para continuar.');
+      setError("Faça login para continuar.");
       return;
     }
     setIsSaving(true);
     setError(null);
     try {
-      const projectRef = doc(db, 'projects', id);
+      const projectRef = doc(db, "projects", id);
       const snap = await getDoc(projectRef);
       if (!snap.exists() || snap.data()?.userId !== user.uid) {
-        setError('Projeto não encontrado.');
+        setError("Projeto não encontrado.");
         return;
       }
       const existing = (snap.data().materiais ?? []) as Material[];
@@ -197,7 +189,7 @@ export default function AddPdfScreen() {
         resumoMedio: result.resumoMedio,
         resumoCompleto: result.resumoCompleto,
         cards: result.cards,
-        status: 'pending',
+        status: "pending",
       }));
       const updated = [...existing, ...newMateriais];
       await updateDoc(projectRef, {
@@ -207,7 +199,7 @@ export default function AddPdfScreen() {
       });
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar no projeto.');
+      setError(err instanceof Error ? err.message : "Erro ao salvar no projeto.");
     } finally {
       setIsSaving(false);
     }
@@ -223,11 +215,7 @@ export default function AddPdfScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          style={styles.backRow}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.backRow} onPress={() => router.back()} activeOpacity={0.7}>
           <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
           <ThemedText style={[styles.backText, { color: colors.mutedForeground }]}>
             Voltar
@@ -236,8 +224,8 @@ export default function AddPdfScreen() {
 
         <ThemedText style={styles.title}>Adicionar PDF ou fotos</ThemedText>
         <ThemedText style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Envie PDFs e/ou fotos para gerar novos tópicos neste projeto. Você pode
-          juntar tudo em um tópico ou gerar um tópico por arquivo.
+          Envie PDFs e/ou fotos para gerar novos tópicos neste projeto. Você pode juntar tudo em um
+          tópico ou gerar um tópico por arquivo.
         </ThemedText>
 
         <UploadSourcesForm
@@ -272,8 +260,13 @@ export default function AddPdfScreen() {
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
               ) : (
                 <>
-                  <Feather name="save" size={18} color={colors.primaryForeground} style={{ marginRight: 8 }} />
-                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>
+                  <Feather
+                    name="save"
+                    size={18}
+                    color={colors.primaryForeground}
+                    style={{ marginRight: 8 }}
+                  />
+                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
                     Adicionar {results.length} tópico(s) ao projeto
                   </ThemedText>
                 </>
@@ -290,9 +283,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16 },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 24 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 24 },
   backText: { fontSize: 14 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
   subtitle: { fontSize: 16, marginBottom: 24 },
-  saveBtn: { width: '100%' },
+  saveBtn: { width: "100%" },
 });

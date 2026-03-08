@@ -1,4 +1,4 @@
-import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
   getAuth,
   setPersistence,
@@ -6,12 +6,12 @@ import {
   onAuthStateChanged,
   type Auth,
   type User,
-} from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+} from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { env } from './env';
+import { env } from "./env";
 
 const firebaseConfig = {
   apiKey: env.firebaseApiKey,
@@ -34,13 +34,13 @@ export function getFirebaseAuth(): Auth | null {
   const app = getFirebaseApp();
   if (!app) return null;
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     const auth = getAuth(app);
     setPersistence(auth, browserLocalPersistence).catch(() => {});
     return auth;
   }
 
-  const authMod = require('firebase/auth') as {
+  const authMod = require("firebase/auth") as {
     getAuth: (app: FirebaseApp) => Auth;
     initializeAuth: (app: FirebaseApp, opts: { persistence: unknown }) => Auth;
     getReactNativePersistence: (storage: unknown) => unknown;
@@ -51,15 +51,12 @@ export function getFirebaseAuth(): Auth | null {
     });
   } catch (e: unknown) {
     const err = e as { code?: string };
-    if (err?.code === 'auth/already-initialized') return authMod.getAuth(app);
+    if (err?.code === "auth/already-initialized") return authMod.getAuth(app);
     throw e;
   }
 }
 
-export function getCurrentUserWhenReady(
-  auth: Auth | null,
-  timeoutMs = 3000
-): Promise<User | null> {
+export function getCurrentUserWhenReady(auth: Auth | null, timeoutMs = 3000): Promise<User | null> {
   if (!auth) return Promise.resolve(null);
   const current = auth.currentUser;
   if (current) return Promise.resolve(current);

@@ -14,6 +14,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ## Fase 1 — Fundação
 
 ### 1. `chore/setup-theme-and-config` ✅
+
 **Objetivo:** Alinhar tema (cores MindEase), variáveis de ambiente e config Firebase.
 
 - [ ] Cores light/dark iguais ao mindease-web (`constants/theme.ts` = design-tokens)
@@ -25,6 +26,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ---
 
 ### 2. `feature/firebase-auth`
+
 **Objetivo:** Auth no app usando o mesmo Firebase do web (login, logout, estado).
 
 - [ ] SDK Firebase (app) com mesma config do web
@@ -37,6 +39,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ---
 
 ### 3. `feature/api-client`
+
 **Objetivo:** Cliente para chamar a API do mindease-web a partir do app.
 
 - [ ] `EXPO_PUBLIC_API_BASE_URL` → base da API (ex: URL do deploy do web)
@@ -50,6 +53,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ## Fase 2 — Núcleo do produto
 
 ### 4. `feature/home-projects`
+
 **Objetivo:** Home com lista de projetos (Firestore), igual ao web.
 
 - [ ] Listar projetos do usuário (Firestore `projects`, `userId`, `orderBy updatedAt`)
@@ -62,6 +66,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ---
 
 ### 5. `feature/new-project`
+
 **Objetivo:** Criar projeto e adicionar PDFs/materiais (upload + processamento).
 
 - [ ] Tela "Novo projeto" (nome, emoji, opcionalmente tags)
@@ -74,6 +79,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ---
 
 ### 6. `feature/project-detail`
+
 **Objetivo:** Detalhe do projeto, materiais, editar/excluir.
 
 - [ ] Tela projeto por `id`: dados do projeto, lista de materiais
@@ -85,6 +91,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ---
 
 ### 7. `feature/study-flow`
+
 **Objetivo:** Estudar (flashcards, quiz, chat) por material/projeto.
 
 - [ ] Tela estudar por projeto (lista de materiais)
@@ -97,6 +104,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ---
 
 ### 8. `feature/review`
+
 **Objetivo:** Revisão (repetição espaçada) de cards.
 
 - [ ] Tela "Revisar" com cards pendentes (lógica igual ao web)
@@ -109,6 +117,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ## Fase 3 — Perfil e polish
 
 ### 9. `feature/profile`
+
 **Objetivo:** Perfil e preferências (espelhando web).
 
 - [ ] Dados do usuário e preferências (tamanho resumo, duração sessão, etc.)
@@ -120,6 +129,7 @@ O **mindEase-APP** é a versão mobile (Expo/React Native) do **mindease-web**. 
 ---
 
 ### 10. `chore/navigation-and-shell`
+
 **Objetivo:** Navegação e shell consistentes com o web.
 
 - [ ] Abas: Home, Revisar (se houver pendentes), Perfil

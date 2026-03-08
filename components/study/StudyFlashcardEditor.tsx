@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   StyleSheet,
@@ -7,14 +7,14 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-} from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { ThemedText } from '@/components/themed-text';
-import { Button } from '@/components/atoms/Button';
-import { Input } from '@/components/atoms/Input';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import type { Material, ProjectCard } from '@/types/project';
+} from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { ThemedText } from "@/components/themed-text";
+import { Button } from "@/components/atoms/Button";
+import { Input } from "@/components/atoms/Input";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
+import type { Material, ProjectCard } from "@/types/project";
 
 export type ProjectCardWithSource = {
   materialId: string;
@@ -28,7 +28,7 @@ export type ProjectFlashcardEditorProps = {
   materiais: Material[];
   saving: boolean;
   onSaveCard: (opts: {
-    mode: 'edit' | 'new';
+    mode: "edit" | "new";
     materialId: string;
     indexInMaterial?: number;
     titulo: string;
@@ -44,15 +44,15 @@ export function ProjectFlashcardEditor({
   onSaveCard,
   onDeleteCard,
 }: ProjectFlashcardEditorProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
 
   const [editItem, setEditItem] = useState<ProjectCardWithSource | null>(null);
-  const [editTitulo, setEditTitulo] = useState('');
-  const [editConteudo, setEditConteudo] = useState('');
+  const [editTitulo, setEditTitulo] = useState("");
+  const [editConteudo, setEditConteudo] = useState("");
   const [newMaterialId, setNewMaterialId] = useState<string | null>(null);
-  const [newTitulo, setNewTitulo] = useState('');
-  const [newConteudo, setNewConteudo] = useState('');
+  const [newTitulo, setNewTitulo] = useState("");
+  const [newConteudo, setNewConteudo] = useState("");
   const [deleteItem, setDeleteItem] = useState<ProjectCardWithSource | null>(null);
 
   const hasMateriais = materiais.length > 0;
@@ -66,8 +66,8 @@ export function ProjectFlashcardEditor({
 
   const openNew = () => {
     setNewMaterialId(materiais[0]?.id ?? null);
-    setNewTitulo('');
-    setNewConteudo('');
+    setNewTitulo("");
+    setNewConteudo("");
     setEditItem(null);
   };
 
@@ -78,7 +78,9 @@ export function ProjectFlashcardEditor({
         {hasMateriais && (
           <Button variant="outline" onPress={openNew} style={styles.newBtn}>
             <Feather name="plus" size={18} color={colors.primary} />
-            <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Nova flashcard</ThemedText>
+            <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>
+              Nova flashcard
+            </ThemedText>
           </Button>
         )}
       </View>
@@ -96,7 +98,10 @@ export function ProjectFlashcardEditor({
               <ThemedText style={styles.itemTitulo} numberOfLines={1}>
                 {item.card.titulo}
               </ThemedText>
-              <ThemedText style={[styles.itemConteudo, { color: colors.mutedForeground }]} numberOfLines={2}>
+              <ThemedText
+                style={[styles.itemConteudo, { color: colors.mutedForeground }]}
+                numberOfLines={2}
+              >
                 {item.card.conteudo}
               </ThemedText>
             </View>
@@ -110,7 +115,7 @@ export function ProjectFlashcardEditor({
               <TouchableOpacity
                 onPress={() => setDeleteItem(item)}
                 disabled={saving}
-                style={[styles.iconBtn, { backgroundColor: colors.destructive + '20' }]}
+                style={[styles.iconBtn, { backgroundColor: colors.destructive + "20" }]}
               >
                 <Feather name="trash-2" size={16} color={colors.destructive} />
               </TouchableOpacity>
@@ -128,7 +133,10 @@ export function ProjectFlashcardEditor({
       {/* Modal: Editar flashcard */}
       <Modal visible={!!editItem} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => !saving && setEditItem(null)}>
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalBox, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <ThemedText style={styles.modalTitle}>Editar flashcard</ThemedText>
             <ThemedText style={styles.modalLabel}>Pergunta (frente)</ThemedText>
             <Input
@@ -143,7 +151,14 @@ export function ProjectFlashcardEditor({
               onChangeText={setEditConteudo}
               placeholder="Resposta..."
               multiline
-              style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
+              ]}
               placeholderTextColor={colors.mutedForeground}
             />
             <View style={styles.modalActions}>
@@ -154,7 +169,7 @@ export function ProjectFlashcardEditor({
                 onPress={async () => {
                   if (!editItem) return;
                   await onSaveCard({
-                    mode: 'edit',
+                    mode: "edit",
                     materialId: editItem.materialId,
                     indexInMaterial: editItem.indexInMaterial,
                     titulo: editTitulo,
@@ -164,7 +179,7 @@ export function ProjectFlashcardEditor({
                 }}
                 disabled={saving || !editTitulo.trim() || !editConteudo.trim()}
               >
-                {saving ? 'Salvando...' : 'Salvar'}
+                {saving ? "Salvando..." : "Salvar"}
               </Button>
             </View>
           </Pressable>
@@ -174,7 +189,10 @@ export function ProjectFlashcardEditor({
       {/* Modal: Nova flashcard (escolher tópico) */}
       <Modal visible={!!newMaterialId} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => !saving && setNewMaterialId(null)}>
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalBox, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <ThemedText style={styles.modalTitle}>Nova flashcard</ThemedText>
             <ThemedText style={styles.modalLabel}>Tópico</ThemedText>
             <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
@@ -184,25 +202,46 @@ export function ProjectFlashcardEditor({
                   onPress={() => setNewMaterialId(m.id)}
                   style={[
                     styles.pickerOption,
-                    { backgroundColor: newMaterialId === m.id ? colors.primary + '20' : colors.muted },
+                    {
+                      backgroundColor:
+                        newMaterialId === m.id ? colors.primary + "20" : colors.muted,
+                    },
                   ]}
                 >
-                  <ThemedText style={newMaterialId === m.id ? { color: colors.primary, fontWeight: '600' } : {}}>
+                  <ThemedText
+                    style={
+                      newMaterialId === m.id ? { color: colors.primary, fontWeight: "600" } : {}
+                    }
+                  >
                     {m.nomeArquivo ?? m.id}
                   </ThemedText>
-                  {newMaterialId === m.id && <Feather name="check" size={18} color={colors.primary} />}
+                  {newMaterialId === m.id && (
+                    <Feather name="check" size={18} color={colors.primary} />
+                  )}
                 </Pressable>
               ))}
             </ScrollView>
             <ThemedText style={styles.modalLabel}>Pergunta (frente)</ThemedText>
-            <Input value={newTitulo} onChangeText={setNewTitulo} placeholder="Título / pergunta" style={styles.modalInput} />
+            <Input
+              value={newTitulo}
+              onChangeText={setNewTitulo}
+              placeholder="Título / pergunta"
+              style={styles.modalInput}
+            />
             <ThemedText style={styles.modalLabel}>Resposta (verso)</ThemedText>
             <TextInput
               value={newConteudo}
               onChangeText={setNewConteudo}
               placeholder="Resposta..."
               multiline
-              style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
+              ]}
               placeholderTextColor={colors.mutedForeground}
             />
             <View style={styles.modalActions}>
@@ -213,18 +252,18 @@ export function ProjectFlashcardEditor({
                 onPress={async () => {
                   if (!newMaterialId) return;
                   await onSaveCard({
-                    mode: 'new',
+                    mode: "new",
                     materialId: newMaterialId,
                     titulo: newTitulo,
                     conteudo: newConteudo,
                   });
                   setNewMaterialId(null);
-                  setNewTitulo('');
-                  setNewConteudo('');
+                  setNewTitulo("");
+                  setNewConteudo("");
                 }}
                 disabled={saving || !newTitulo.trim() || !newConteudo.trim() || !newMaterialId}
               >
-                {saving ? 'Salvando...' : 'Salvar'}
+                {saving ? "Salvando..." : "Salvar"}
               </Button>
             </View>
           </Pressable>
@@ -234,7 +273,10 @@ export function ProjectFlashcardEditor({
       {/* Modal: Confirmar exclusão */}
       <Modal visible={!!deleteItem} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => !saving && setDeleteItem(null)}>
-          <Pressable style={[styles.modalBox, styles.deleteModal, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalBox, styles.deleteModal, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <ThemedText style={styles.modalTitle}>Excluir esta flashcard?</ThemedText>
             <ThemedText style={[styles.deleteDesc, { color: colors.mutedForeground }]}>
               A pergunta e a resposta serão removidas. Esta ação não pode ser desfeita.
@@ -252,7 +294,7 @@ export function ProjectFlashcardEditor({
                 }}
                 disabled={saving}
               >
-                {saving ? 'Excluindo...' : 'Excluir'}
+                {saving ? "Excluindo..." : "Excluir"}
               </Button>
             </View>
           </Pressable>
@@ -266,7 +308,7 @@ export type MaterialFlashcardEditorProps = {
   cards: ProjectCard[];
   saving: boolean;
   onSaveCard: (opts: {
-    mode: 'edit' | 'new';
+    mode: "edit" | "new";
     index?: number;
     titulo: string;
     conteudo: string;
@@ -280,20 +322,20 @@ export function MaterialFlashcardEditor({
   onSaveCard,
   onDeleteCard,
 }: MaterialFlashcardEditorProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
 
   const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [editTitulo, setEditTitulo] = useState('');
-  const [editConteudo, setEditConteudo] = useState('');
+  const [editTitulo, setEditTitulo] = useState("");
+  const [editConteudo, setEditConteudo] = useState("");
   const [isNew, setIsNew] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const openNew = () => {
     setIsNew(true);
     setEditIndex(null);
-    setEditTitulo('');
-    setEditConteudo('');
+    setEditTitulo("");
+    setEditConteudo("");
   };
 
   const openEdit = (index: number) => {
@@ -315,18 +357,26 @@ export function MaterialFlashcardEditor({
         <ThemedText style={styles.sectionTitle}>Editar e criar flashcards</ThemedText>
         <Button variant="outline" onPress={openNew} style={styles.newBtn}>
           <Feather name="plus" size={18} color={colors.primary} />
-          <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Nova flashcard</ThemedText>
+          <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>
+            Nova flashcard
+          </ThemedText>
         </Button>
       </View>
 
       <View style={styles.list}>
         {cards.map((c, i) => (
-          <View key={i} style={[styles.item, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View
+            key={i}
+            style={[styles.item, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
             <View style={styles.itemContent}>
               <ThemedText style={styles.itemTitulo} numberOfLines={1}>
                 {c.titulo}
               </ThemedText>
-              <ThemedText style={[styles.itemConteudo, { color: colors.mutedForeground }]} numberOfLines={2}>
+              <ThemedText
+                style={[styles.itemConteudo, { color: colors.mutedForeground }]}
+                numberOfLines={2}
+              >
                 {c.conteudo}
               </ThemedText>
             </View>
@@ -340,7 +390,7 @@ export function MaterialFlashcardEditor({
               <TouchableOpacity
                 onPress={() => setDeleteIndex(i)}
                 disabled={saving}
-                style={[styles.iconBtn, { backgroundColor: colors.destructive + '20' }]}
+                style={[styles.iconBtn, { backgroundColor: colors.destructive + "20" }]}
               >
                 <Feather name="trash-2" size={16} color={colors.destructive} />
               </TouchableOpacity>
@@ -358,17 +408,34 @@ export function MaterialFlashcardEditor({
       {/* Modal: Editar / Nova flashcard */}
       <Modal visible={editIndex !== null || isNew} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => !saving && closeEditor()}>
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
-            <ThemedText style={styles.modalTitle}>{isNew ? 'Nova flashcard' : 'Editar flashcard'}</ThemedText>
+          <Pressable
+            style={[styles.modalBox, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ThemedText style={styles.modalTitle}>
+              {isNew ? "Nova flashcard" : "Editar flashcard"}
+            </ThemedText>
             <ThemedText style={styles.modalLabel}>Pergunta (frente)</ThemedText>
-            <Input value={editTitulo} onChangeText={setEditTitulo} placeholder="Título / pergunta" style={styles.modalInput} />
+            <Input
+              value={editTitulo}
+              onChangeText={setEditTitulo}
+              placeholder="Título / pergunta"
+              style={styles.modalInput}
+            />
             <ThemedText style={styles.modalLabel}>Resposta (verso)</ThemedText>
             <TextInput
               value={editConteudo}
               onChangeText={setEditConteudo}
               placeholder="Resposta..."
               multiline
-              style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
+              ]}
               placeholderTextColor={colors.mutedForeground}
             />
             <View style={styles.modalActions}>
@@ -378,10 +445,10 @@ export function MaterialFlashcardEditor({
               <Button
                 onPress={async () => {
                   if (isNew) {
-                    await onSaveCard({ mode: 'new', titulo: editTitulo, conteudo: editConteudo });
+                    await onSaveCard({ mode: "new", titulo: editTitulo, conteudo: editConteudo });
                   } else if (editIndex !== null) {
                     await onSaveCard({
-                      mode: 'edit',
+                      mode: "edit",
                       index: editIndex,
                       titulo: editTitulo,
                       conteudo: editConteudo,
@@ -391,7 +458,7 @@ export function MaterialFlashcardEditor({
                 }}
                 disabled={saving || !editTitulo.trim() || !editConteudo.trim()}
               >
-                {saving ? 'Salvando...' : 'Salvar'}
+                {saving ? "Salvando..." : "Salvar"}
               </Button>
             </View>
           </Pressable>
@@ -401,7 +468,10 @@ export function MaterialFlashcardEditor({
       {/* Modal: Confirmar exclusão */}
       <Modal visible={deleteIndex !== null} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => !saving && setDeleteIndex(null)}>
-          <Pressable style={[styles.modalBox, styles.deleteModal, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalBox, styles.deleteModal, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <ThemedText style={styles.modalTitle}>Excluir esta flashcard?</ThemedText>
             <ThemedText style={[styles.deleteDesc, { color: colors.mutedForeground }]}>
               A pergunta e a resposta serão removidas. Esta ação não pode ser desfeita.
@@ -419,7 +489,7 @@ export function MaterialFlashcardEditor({
                 }}
                 disabled={saving}
               >
-                {saving ? 'Excluindo...' : 'Excluir'}
+                {saving ? "Excluindo..." : "Excluir"}
               </Button>
             </View>
           </Pressable>
@@ -431,27 +501,59 @@ export function MaterialFlashcardEditor({
 
 const styles = StyleSheet.create({
   wrapper: { marginBottom: 24 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '600' },
-  newBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: "600" },
+  newBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
   list: { gap: 8 },
-  item: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, borderRadius: 8, borderWidth: 1 },
+  item: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
   itemContent: { flex: 1, minWidth: 0 },
   itemMaterial: { fontSize: 12, marginBottom: 2 },
-  itemTitulo: { fontSize: 15, fontWeight: '600' },
+  itemTitulo: { fontSize: 15, fontWeight: "600" },
   itemConteudo: { fontSize: 14, marginTop: 4 },
-  itemActions: { flexDirection: 'row', gap: 8 },
+  itemActions: { flexDirection: "row", gap: 8 },
   iconBtn: { padding: 8, borderRadius: 8 },
   emptyText: { fontSize: 14 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
-  modalBox: { borderRadius: 12, padding: 20, maxHeight: '90%' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalBox: { borderRadius: 12, padding: 20, maxHeight: "90%" },
   deleteModal: { maxWidth: 400 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
-  modalLabel: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+  modalLabel: { fontSize: 14, fontWeight: "500", marginBottom: 6 },
   modalInput: { marginBottom: 16 },
-  textArea: { minHeight: 120, borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16 },
-  modalActions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
+  textArea: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalActions: { flexDirection: "row", gap: 12, justifyContent: "flex-end" },
   pickerScroll: { maxHeight: 120, marginBottom: 16 },
-  pickerOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderRadius: 8, marginBottom: 4 },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
   deleteDesc: { fontSize: 14, marginBottom: 16 },
 });

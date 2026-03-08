@@ -1,2 +1,2 @@
-export { SignupForm } from './SignupForm';
-export { signupSchema, type SignupFormData } from './signupSchema';
+export { SignupForm } from "./SignupForm";
+export { signupSchema, type SignupFormData } from "./signupSchema";

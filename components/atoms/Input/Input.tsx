@@ -1,11 +1,7 @@
-import {
-  TextInput,
-  StyleSheet,
-  type TextInputProps,
-} from 'react-native';
-import React, { forwardRef } from 'react';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { TextInput, StyleSheet, type TextInputProps } from "react-native";
+import React, { forwardRef } from "react";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
 
 export type InputProps = TextInputProps;
 
@@ -22,7 +18,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   { style, placeholderTextColor, ...rest },
   ref
 ) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
   const placeholderColor =
     placeholderTextColor ?? withOpacity(colors.mutedForeground, PLACEHOLDER_OPACITY);

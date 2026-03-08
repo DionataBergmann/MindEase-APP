@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   ScrollView,
@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { onAuthStateChanged } from 'firebase/auth';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   doc,
@@ -23,27 +23,27 @@ import {
   deleteDoc,
   serverTimestamp,
   type Timestamp,
-} from 'firebase/firestore';
-import Feather from '@expo/vector-icons/Feather';
-import { getFirebaseAuth, getFirestoreDb } from '@/lib/firebase';
-import { isDueForReview, isCardDueForReview } from '@/lib/spaced-repetition';
-import type { Project, Material } from '@/types/project';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Button } from '@/components/atoms/Button';
-import { Input } from '@/components/atoms/Input';
-import { Progress } from '@/components/ui/progress';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+} from "firebase/firestore";
+import Feather from "@expo/vector-icons/Feather";
+import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
+import { isCardDueForReview } from "@/lib/spaced-repetition";
+import type { Project, Material } from "@/types/project";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/atoms/Button";
+import { Input } from "@/components/atoms/Input";
+import { Progress } from "@/components/ui/progress";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Colors } from "@/constants/theme";
 
 function formatLastAccess(ts: Timestamp | undefined): string {
-  if (!ts) return '—';
+  if (!ts) return "—";
   const d = ts.toDate();
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays <= 0) return 'Hoje';
-  if (diffDays === 1) return 'Ontem';
+  if (diffDays <= 0) return "Hoje";
+  if (diffDays === 1) return "Ontem";
   if (diffDays < 7) return `${diffDays} dias atrás`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} semana(s) atrás`;
   return `${Math.floor(diffDays / 30)} mês(es) atrás`;
@@ -52,17 +52,17 @@ function formatLastAccess(ts: Timestamp | undefined): string {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() ?? "light";
   const colors = Colors[scheme];
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [editProject, setEditProject] = useState<Project | null>(null);
-  const [editTitle, setEditTitle] = useState('');
+  const [editTitle, setEditTitle] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
-  const [newTagInput, setNewTagInput] = useState('');
+  const [newTagInput, setNewTagInput] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -87,9 +87,9 @@ export default function HomeScreen() {
         return;
       }
       const q = query(
-        collection(db, 'projects'),
-        where('userId', '==', user.uid),
-        orderBy('updatedAt', 'desc')
+        collection(db, "projects"),
+        where("userId", "==", user.uid),
+        orderBy("updatedAt", "desc")
       );
       unsubSnapshot = onSnapshot(
         q,
@@ -101,9 +101,9 @@ export default function HomeScreen() {
               : data.resumo || (data.cards?.length ?? 0) > 0
                 ? [
                     {
-                      id: 'legacy',
-                      nomeArquivo: 'PDF',
-                      resumo: data.resumo ?? '',
+                      id: "legacy",
+                      nomeArquivo: "PDF",
+                      resumo: data.resumo ?? "",
                       cards: data.cards ?? [],
                     },
                   ]
@@ -111,8 +111,8 @@ export default function HomeScreen() {
             return {
               id: docSnap.id,
               userId: data.userId,
-              title: data.title ?? 'Sem título',
-              emoji: data.emoji ?? '📚',
+              title: data.title ?? "Sem título",
+              emoji: data.emoji ?? "📚",
               pdfCount: data.pdfCount ?? materiais.length,
               progress: data.progress ?? 0,
               lastAccess: formatLastAccess(data.updatedAt),
@@ -127,7 +127,7 @@ export default function HomeScreen() {
           setLoading(false);
         },
         (err) => {
-          console.error('Firestore snapshot error:', err);
+          console.error("Firestore snapshot error:", err);
           setLoading(false);
         }
       );
@@ -144,15 +144,15 @@ export default function HomeScreen() {
     if (!db) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'projects', editProject.id), {
+      await updateDoc(doc(db, "projects", editProject.id), {
         title: editTitle.trim(),
         tags: editTags,
         updatedAt: serverTimestamp(),
       });
       setEditProject(null);
-      setEditTitle('');
+      setEditTitle("");
       setEditTags([]);
-      setNewTagInput('');
+      setNewTagInput("");
     } catch {
       // ignore
     } finally {
@@ -164,7 +164,7 @@ export default function HomeScreen() {
     const t = newTagInput.trim().toLowerCase();
     if (!t || editTags.includes(t)) return;
     setEditTags((prev) => [...prev, t].sort((a, b) => a.localeCompare(b)));
-    setNewTagInput('');
+    setNewTagInput("");
   };
 
   const removeEditTag = (tag: string) => {
@@ -177,7 +177,7 @@ export default function HomeScreen() {
     if (!db) return;
     setSaving(true);
     try {
-      await deleteDoc(doc(db, 'projects', deleteProjectId));
+      await deleteDoc(doc(db, "projects", deleteProjectId));
       setDeleteProjectId(null);
     } catch {
       // ignore
@@ -189,7 +189,9 @@ export default function HomeScreen() {
   const allTags = useMemo(() => {
     const set = new Set<string>();
     projects.forEach((p) => p.tags?.forEach((t) => set.add(t.trim())));
-    return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b));
+    return Array.from(set)
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
   }, [projects]);
 
   const filtered = useMemo(() => {
@@ -199,47 +201,30 @@ export default function HomeScreen() {
       if (!q) return true;
       if (p.title.toLowerCase().includes(q)) return true;
       for (const m of p.materiais ?? []) {
-        if ((m.nomeArquivo ?? '').toLowerCase().includes(q)) return true;
-        const resumoText = (m.resumo ?? '').toLowerCase();
+        if ((m.nomeArquivo ?? "").toLowerCase().includes(q)) return true;
+        const resumoText = (m.resumo ?? "").toLowerCase();
         if (resumoText.includes(q)) return true;
       }
-      if ((p.resumo ?? '').toLowerCase().includes(q)) return true;
+      if ((p.resumo ?? "").toLowerCase().includes(q)) return true;
       return false;
     });
   }, [projects, search, selectedTag]);
 
-  const totalProgress =
-    projects.length > 0
-      ? Math.round(
-          projects.reduce((acc, p) => acc + p.progress, 0) / projects.length
-        )
-      : 0;
-
   const totalTopics = projects.reduce(
     (acc, p) =>
       acc +
-      (p.materiais?.length ??
-        (p.pdfCount || (p.resumo || (p.cards?.length ?? 0) > 0 ? 1 : 0))),
+      (p.materiais?.length ?? (p.pdfCount || (p.resumo || (p.cards?.length ?? 0) > 0 ? 1 : 0))),
     0
   );
   const completedTopicCount = projects.reduce((acc, p) => {
     if (p.materiais?.length)
-      return (
-        acc +
-        p.materiais.filter((m) => (m.status ?? 'pending') === 'completed')
-          .length
-      );
-    if (
-      p.progress === 100 &&
-      (p.pdfCount || p.resumo || (p.cards?.length ?? 0) > 0)
-    )
+      return acc + p.materiais.filter((m) => (m.status ?? "pending") === "completed").length;
+    if (p.progress === 100 && (p.pdfCount || p.resumo || (p.cards?.length ?? 0) > 0))
       return acc + 1;
     return acc;
   }, 0);
-  const topicProgress =
-    totalTopics > 0 ? Math.round((completedTopicCount / totalTopics) * 100) : 0;
+  const topicProgress = totalTopics > 0 ? Math.round((completedTopicCount / totalTopics) * 100) : 0;
 
-  const dueForReview: { project: Project; material: Material }[] = [];
   const dueCards: {
     project: Project;
     material: Material;
@@ -247,15 +232,8 @@ export default function HomeScreen() {
   }[] = [];
   projects.forEach((p) => {
     p.materiais?.forEach((m) => {
-      if (
-        isDueForReview(m.nextReviewAt) &&
-        (m.cards?.length ?? 0) > 0
-      ) {
-        dueForReview.push({ project: p, material: m });
-      }
       (m.cards ?? []).forEach((card, cardIndex) => {
-        if (isCardDueForReview(card))
-          dueCards.push({ project: p, material: m, cardIndex });
+        if (isCardDueForReview(card)) dueCards.push({ project: p, material: m, cardIndex });
       });
     });
   });
@@ -268,7 +246,12 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Welcome banner */}
-        <View style={[styles.banner, { borderColor: colors.primary + '20', backgroundColor: colors.primary + '08' }]}>
+        <View
+          style={[
+            styles.banner,
+            { borderColor: colors.primary + "20", backgroundColor: colors.primary + "08" },
+          ]}
+        >
           <ThemedText type="default" style={styles.bannerTitle}>
             Olá, bom te ver de volta! 🌿
           </ThemedText>
@@ -276,70 +259,66 @@ export default function HomeScreen() {
             Continue de onde parou nos seus estudos.
           </ThemedText>
           <View style={styles.statsGrid}>
-            <View style={[styles.statCard, { backgroundColor: colors.card + 'CC', borderColor: colors.border }]}>
-              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>Projetos</ThemedText>
-              <ThemedText style={styles.statValue}>
-                {loading ? '—' : projects.length}
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card + "CC", borderColor: colors.border },
+              ]}
+            >
+              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Projetos
               </ThemedText>
+              <ThemedText style={styles.statValue}>{loading ? "—" : projects.length}</ThemedText>
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.card + 'CC', borderColor: colors.border }]}>
-              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>Tópicos / PDFs</ThemedText>
-              <ThemedText style={styles.statValue}>
-                {loading ? '—' : totalTopics}
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card + "CC", borderColor: colors.border },
+              ]}
+            >
+              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Tópicos / PDFs
               </ThemedText>
+              <ThemedText style={styles.statValue}>{loading ? "—" : totalTopics}</ThemedText>
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.card + 'CC', borderColor: colors.border }]}>
-              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>Tópicos concluídos</ThemedText>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card + "CC", borderColor: colors.border },
+              ]}
+            >
+              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Tópicos concluídos
+              </ThemedText>
               <ThemedText style={[styles.statValue, { color: colors.success }]}>
-                {loading ? '—' : completedTopicCount}
+                {loading ? "—" : completedTopicCount}
               </ThemedText>
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.card + 'CC', borderColor: colors.border }]}>
-              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>Progresso (tópicos)</ThemedText>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.card + "CC", borderColor: colors.border },
+              ]}
+            >
+              <ThemedText style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Progresso (tópicos)
+              </ThemedText>
               <ThemedText style={[styles.statValue, { color: colors.primary }]}>
-                {loading ? '—' : `${topicProgress}%`}
+                {loading ? "—" : `${topicProgress}%`}
               </ThemedText>
             </View>
           </View>
         </View>
 
-        {/* Para revisar hoje */}
-        {!loading && dueForReview.length > 0 && (
-          <View style={[styles.reviewSection, { borderColor: colors.primary + '30', backgroundColor: colors.primary + '0A' }]}>
-            <View style={styles.reviewHeader}>
-              <Feather name="refresh-cw" size={18} color={colors.primary} />
-              <ThemedText style={styles.reviewTitle}>Para revisar hoje</ThemedText>
-            </View>
-            <ThemedText style={[styles.reviewDesc, { color: colors.mutedForeground }]}>
-              {dueForReview.length} tópico{dueForReview.length !== 1 ? 's' : ''} na fila de repetição espaçada.
-            </ThemedText>
-            {dueForReview.slice(0, 10).map(({ project, material }) => (
-              <TouchableOpacity
-                key={`${project.id}-${material.id}`}
-                style={[styles.reviewItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => router.push(`/project/${project.id}/material/${material.id}` as any)}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={styles.reviewItemTitle} numberOfLines={1}>
-                  {material.nomeArquivo ?? 'Tópico'}
-                </ThemedText>
-                <ThemedText style={[styles.reviewItemMeta, { color: colors.mutedForeground }]} numberOfLines={1}>
-                  {project.emoji} {project.title}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-            {dueForReview.length > 10 && (
-              <ThemedText style={[styles.reviewMore, { color: colors.mutedForeground }]}>
-                e mais {dueForReview.length - 10} tópico{dueForReview.length - 10 !== 1 ? 's' : ''} para revisar
-              </ThemedText>
-            )}
-          </View>
-        )}
-
         {/* Search + buttons */}
         <View style={styles.toolbar}>
           <View style={styles.searchWrap}>
-            <Feather name="search" size={18} color={colors.mutedForeground} style={styles.searchIcon} />
+            <Feather
+              name="search"
+              size={18}
+              color={colors.mutedForeground}
+              style={styles.searchIcon}
+            />
             <RNTextInput
               style={[
                 styles.searchInput,
@@ -359,21 +338,36 @@ export default function HomeScreen() {
             {!loading && dueCards.length > 0 && (
               <Button
                 variant="outline"
-                onPress={() => router.push('/review' as any)}
+                onPress={() => router.push("/review" as any)}
                 style={styles.toolbarBtn}
               >
-                <Feather name="layers" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-                <ThemedText style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>
+                <Feather
+                  name="layers"
+                  size={16}
+                  color={colors.primary}
+                  style={{ marginRight: 6 }}
+                />
+                <ThemedText style={{ color: colors.primary, fontWeight: "600", fontSize: 14 }}>
                   Revisar cards ({dueCards.length})
                 </ThemedText>
               </Button>
             )}
             <Button
-              onPress={() => router.push('/new-project' as any)}
-              style={[styles.toolbarBtn, (!loading && dueCards.length > 0) ? {} : styles.toolbarBtnFull]}
+              onPress={() => router.push("/new-project" as any)}
+              style={[
+                styles.toolbarBtn,
+                !loading && dueCards.length > 0 ? {} : styles.toolbarBtnFull,
+              ]}
             >
-              <Feather name="plus" size={18} color={colors.primaryForeground} style={{ marginRight: 6 }} />
-              <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600', fontSize: 16 }}>
+              <Feather
+                name="plus"
+                size={18}
+                color={colors.primaryForeground}
+                style={{ marginRight: 6 }}
+              />
+              <ThemedText
+                style={{ color: colors.primaryForeground, fontWeight: "600", fontSize: 16 }}
+              >
                 Novo projeto
               </ThemedText>
             </Button>
@@ -383,18 +377,24 @@ export default function HomeScreen() {
         {/* Tag filters */}
         {allTags.length > 0 && (
           <View style={styles.tagRow}>
-            <ThemedText style={[styles.tagLabel, { color: colors.mutedForeground }]}>Tag:</ThemedText>
+            <ThemedText style={[styles.tagLabel, { color: colors.mutedForeground }]}>
+              Tag:
+            </ThemedText>
             <TouchableOpacity
               style={[
                 styles.tagChip,
-                selectedTag === null ? { backgroundColor: colors.primary } : { backgroundColor: colors.muted },
+                selectedTag === null
+                  ? { backgroundColor: colors.primary }
+                  : { backgroundColor: colors.muted },
               ]}
               onPress={() => setSelectedTag(null)}
             >
               <ThemedText
                 style={[
                   styles.tagChipText,
-                  { color: selectedTag === null ? colors.primaryForeground : colors.mutedForeground },
+                  {
+                    color: selectedTag === null ? colors.primaryForeground : colors.mutedForeground,
+                  },
                 ]}
               >
                 Todos
@@ -405,14 +405,19 @@ export default function HomeScreen() {
                 key={tag}
                 style={[
                   styles.tagChip,
-                  selectedTag === tag ? { backgroundColor: colors.primary } : { backgroundColor: colors.muted },
+                  selectedTag === tag
+                    ? { backgroundColor: colors.primary }
+                    : { backgroundColor: colors.muted },
                 ]}
                 onPress={() => setSelectedTag(selectedTag === tag ? null : tag)}
               >
                 <ThemedText
                   style={[
                     styles.tagChipText,
-                    { color: selectedTag === tag ? colors.primaryForeground : colors.mutedForeground },
+                    {
+                      color:
+                        selectedTag === tag ? colors.primaryForeground : colors.mutedForeground,
+                    },
                   ]}
                 >
                   {tag}
@@ -442,14 +447,19 @@ export default function HomeScreen() {
                     <Feather name="more-vertical" size={18} color={colors.mutedForeground} />
                   </TouchableOpacity>
                   {menuOpenId === project.id && (
-                    <View style={[styles.cardMenuDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View
+                      style={[
+                        styles.cardMenuDropdown,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                      ]}
+                    >
                       <TouchableOpacity
                         style={styles.cardMenuItem}
                         onPress={() => {
                           setEditProject(project);
                           setEditTitle(project.title);
                           setEditTags(project.tags ?? []);
-                          setNewTagInput('');
+                          setNewTagInput("");
                           setMenuOpenId(null);
                         }}
                       >
@@ -464,7 +474,9 @@ export default function HomeScreen() {
                         }}
                       >
                         <Feather name="trash-2" size={14} color={colors.destructive} />
-                        <ThemedText style={[styles.cardMenuItemText, { color: colors.destructive }]}>
+                        <ThemedText
+                          style={[styles.cardMenuItemText, { color: colors.destructive }]}
+                        >
                           Excluir
                         </ThemedText>
                       </TouchableOpacity>
@@ -478,11 +490,11 @@ export default function HomeScreen() {
                   style={styles.cardContent}
                 >
                   <View style={styles.cardHeader}>
-                    <View style={[styles.cardEmoji, { backgroundColor: colors.primary + '20' }]}>
+                    <View style={[styles.cardEmoji, { backgroundColor: colors.primary + "20" }]}>
                       <ThemedText style={styles.cardEmojiText}>{project.emoji}</ThemedText>
                     </View>
                     {project.progress === 100 && (
-                      <View style={[styles.badgeDone, { backgroundColor: colors.success + '25' }]}>
+                      <View style={[styles.badgeDone, { backgroundColor: colors.success + "25" }]}>
                         <ThemedText style={[styles.badgeDoneText, { color: colors.success }]}>
                           ✓ Concluído
                         </ThemedText>
@@ -496,7 +508,9 @@ export default function HomeScreen() {
                     <View style={styles.cardTags}>
                       {project.tags.map((tag) => (
                         <View key={tag} style={[styles.cardTag, { backgroundColor: colors.muted }]}>
-                          <ThemedText style={[styles.cardTagText, { color: colors.mutedForeground }]}>
+                          <ThemedText
+                            style={[styles.cardTagText, { color: colors.mutedForeground }]}
+                          >
                             {tag}
                           </ThemedText>
                         </View>
@@ -519,7 +533,9 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.cardProgressWrap}>
                     <View style={styles.cardProgressLabels}>
-                      <ThemedText style={[styles.cardProgressLabel, { color: colors.mutedForeground }]}>
+                      <ThemedText
+                        style={[styles.cardProgressLabel, { color: colors.mutedForeground }]}
+                      >
                         Progresso
                       </ThemedText>
                       <ThemedText style={styles.cardProgressValue}>{project.progress}%</ThemedText>
@@ -534,8 +550,15 @@ export default function HomeScreen() {
                     style={styles.cardStudyBtn}
                     onPress={() => router.push(`/project/${project.id}/estudar` as any)}
                   >
-                    <Feather name="bookmark" size={16} color={colors.primary} style={{ marginRight: 8 }} />
-                    <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Estudar</ThemedText>
+                    <Feather
+                      name="bookmark"
+                      size={16}
+                      color={colors.primary}
+                      style={{ marginRight: 8 }}
+                    />
+                    <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>
+                      Estudar
+                    </ThemedText>
                   </Button>
                 </View>
               </View>
@@ -545,7 +568,7 @@ export default function HomeScreen() {
 
         {!loading && filtered.length === 0 && (
           <View style={styles.empty}>
-            <Feather name="book" size={40} color={colors.mutedForeground + '99'} />
+            <Feather name="book" size={40} color={colors.mutedForeground + "99"} />
             <ThemedText style={[styles.emptyText, { color: colors.mutedForeground }]}>
               Nenhum projeto encontrado.
             </ThemedText>
@@ -558,29 +581,40 @@ export default function HomeScreen() {
         visible={!!editProject}
         transparent
         animationType="fade"
-        onRequestClose={() => !saving && (setEditProject(null), setEditTags([]), setNewTagInput(''))}
+        onRequestClose={() =>
+          !saving && (setEditProject(null), setEditTags([]), setNewTagInput(""))
+        }
       >
         <Pressable
           style={styles.modalBackdrop}
-          onPress={() => !saving && (setEditProject(null), setEditTags([]), setNewTagInput(''))}
+          onPress={() => !saving && (setEditProject(null), setEditTags([]), setNewTagInput(""))}
         >
-          <Pressable style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <ThemedText style={styles.modalTitle}>Editar projeto</ThemedText>
-            <ThemedText style={[styles.modalLabel, { color: colors.mutedForeground }]}>Nome</ThemedText>
+            <ThemedText style={[styles.modalLabel, { color: colors.mutedForeground }]}>
+              Nome
+            </ThemedText>
             <Input
               value={editTitle}
               onChangeText={setEditTitle}
               placeholder="Nome do projeto"
               style={styles.modalInput}
             />
-            <ThemedText style={[styles.modalLabel, { color: colors.mutedForeground }]}>Tags</ThemedText>
+            <ThemedText style={[styles.modalLabel, { color: colors.mutedForeground }]}>
+              Tags
+            </ThemedText>
             <View style={styles.editTagsRow}>
               {editTags.map((tag) => (
                 <View
                   key={tag}
-                  style={[styles.editTagChip, { backgroundColor: colors.primary + '20' }]}
+                  style={[styles.editTagChip, { backgroundColor: colors.primary + "20" }]}
                 >
-                  <ThemedText style={[styles.editTagText, { color: colors.primary }]}>{tag}</ThemedText>
+                  <ThemedText style={[styles.editTagText, { color: colors.primary }]}>
+                    {tag}
+                  </ThemedText>
                   <TouchableOpacity onPress={() => removeEditTag(tag)} hitSlop={8}>
                     <Feather name="x" size={14} color={colors.primary} />
                   </TouchableOpacity>
@@ -596,7 +630,9 @@ export default function HomeScreen() {
                 onSubmitEditing={addEditTag}
               />
               <Button variant="outline" onPress={addEditTag} style={styles.modalBtnSm}>
-                <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Adicionar</ThemedText>
+                <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>
+                  Adicionar
+                </ThemedText>
               </Button>
             </View>
             <View style={styles.modalActions}>
@@ -606,16 +642,20 @@ export default function HomeScreen() {
                 onPress={() => {
                   setEditProject(null);
                   setEditTags([]);
-                  setNewTagInput('');
+                  setNewTagInput("");
                 }}
               >
-                <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Cancelar</ThemedText>
+                <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>
+                  Cancelar
+                </ThemedText>
               </Button>
               <Button disabled={saving || !editTitle.trim()} onPress={handleSaveProject}>
                 {saving ? (
                   <ActivityIndicator size="small" color={colors.primaryForeground} />
                 ) : (
-                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Salvar</ThemedText>
+                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
+                    Salvar
+                  </ThemedText>
                 )}
               </Button>
             </View>
@@ -630,24 +670,32 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => !saving && setDeleteProjectId(null)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => !saving && setDeleteProjectId(null)}
-        >
-          <Pressable style={[styles.modalBox, styles.modalBoxSm, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable style={styles.modalBackdrop} onPress={() => !saving && setDeleteProjectId(null)}>
+          <Pressable
+            style={[
+              styles.modalBox,
+              styles.modalBoxSm,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <ThemedText style={styles.modalTitle}>Excluir projeto?</ThemedText>
             <ThemedText style={[styles.modalBody, { color: colors.mutedForeground }]}>
               Esta ação não pode ser desfeita. Todos os materiais e cards serão removidos.
             </ThemedText>
             <View style={styles.modalActions}>
               <Button variant="outline" disabled={saving} onPress={() => setDeleteProjectId(null)}>
-                <ThemedText style={{ color: colors.primary, fontWeight: '600' }}>Cancelar</ThemedText>
+                <ThemedText style={{ color: colors.primary, fontWeight: "600" }}>
+                  Cancelar
+                </ThemedText>
               </Button>
               <Button variant="destructive" disabled={saving} onPress={handleDeleteProject}>
                 {saving ? (
                   <ActivityIndicator size="small" color={colors.destructiveForeground} />
                 ) : (
-                  <ThemedText style={{ color: colors.destructiveForeground, fontWeight: '600' }}>Excluir</ThemedText>
+                  <ThemedText style={{ color: colors.destructiveForeground, fontWeight: "600" }}>
+                    Excluir
+                  </ThemedText>
                 )}
               </Button>
             </View>
@@ -668,49 +716,32 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 24,
   },
-  bannerTitle: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
+  bannerTitle: { fontSize: 22, fontWeight: "700", marginBottom: 4 },
   bannerSubtitle: { fontSize: 16, marginBottom: 16 },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   statCard: {
-    minWidth: 0,
+    minWidth: "45%",
     flex: 1,
-    minWidth: '45%',
     borderRadius: 12,
     borderWidth: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  statLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  statValue: { fontSize: 20, fontWeight: '700' },
-  reviewSection: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 20,
-    marginBottom: 24,
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  reviewTitle: { fontSize: 16, fontWeight: '600' },
-  reviewDesc: { fontSize: 14, marginBottom: 12 },
-  reviewItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  reviewItemTitle: { fontWeight: '500', flex: 1 },
-  reviewItemMeta: { fontSize: 12, marginLeft: 8 },
-  reviewMore: { fontSize: 12, marginTop: 8 },
+  statValue: { fontSize: 20, fontWeight: "700" },
   toolbar: { marginBottom: 12 },
-  searchWrap: { position: 'relative', marginBottom: 12 },
-  searchIcon: { position: 'absolute', left: 12, top: 14, zIndex: 1 },
+  searchWrap: { position: "relative", marginBottom: 12 },
+  searchIcon: { position: "absolute", left: 12, top: 14, zIndex: 1 },
   searchInput: {
     borderWidth: 1,
     borderRadius: 8,
@@ -719,87 +750,117 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
   },
-  toolbarButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  toolbarButtons: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   toolbarBtn: { flex: 1, minWidth: 120 },
   toolbarBtnFull: { flex: 1 },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 20 },
+  tagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
   tagLabel: { fontSize: 12, marginRight: 4 },
   tagChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 },
-  tagChipText: { fontSize: 12, fontWeight: '500' },
-  loadingWrap: { paddingVertical: 48, alignItems: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  tagChipText: { fontSize: 12, fontWeight: "500" },
+  loadingWrap: { paddingVertical: 48, alignItems: "center" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
   card: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
     borderRadius: 12,
     borderWidth: 1,
     padding: 20,
-    position: 'relative',
+    position: "relative",
   },
-  cardMenuWrap: { position: 'absolute', top: 12, right: 12, zIndex: 10 },
+  cardMenuWrap: { position: "absolute", top: 12, right: 12, zIndex: 10 },
   cardMenuBtn: { padding: 8 },
   cardMenuDropdown: {
-    position: 'absolute',
+    position: "absolute",
     right: 0,
     top: 36,
     minWidth: 160,
     borderRadius: 8,
     borderWidth: 1,
     paddingVertical: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
-  cardMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  cardMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
   cardMenuItemText: { fontSize: 14 },
   cardContent: { marginTop: 8 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 },
-  cardEmoji: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  cardEmoji: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   cardEmojiText: { fontSize: 22 },
   badgeDone: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 9999 },
-  badgeDoneText: { fontSize: 12, fontWeight: '500' },
-  cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  cardTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 8 },
+  badgeDoneText: { fontSize: 12, fontWeight: "500" },
+  cardTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  cardTags: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 8 },
   cardTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999 },
-  cardTagText: { fontSize: 10, fontWeight: '500' },
-  cardMeta: { flexDirection: 'row', gap: 16, marginBottom: 12 },
-  cardMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardTagText: { fontSize: 10, fontWeight: "500" },
+  cardMeta: { flexDirection: "row", gap: 16, marginBottom: 12 },
+  cardMetaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   cardMetaText: { fontSize: 14 },
   cardProgressWrap: { marginBottom: 4 },
-  cardProgressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  cardProgressLabels: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
   cardProgressLabel: { fontSize: 12 },
-  cardProgressValue: { fontSize: 12, fontWeight: '600' },
+  cardProgressValue: { fontSize: 12, fontWeight: "600" },
   cardProgressBar: { height: 8 },
   cardFooter: { marginTop: 16, paddingTop: 16, borderTopWidth: 1 },
-  cardStudyBtn: { width: '100%' },
-  empty: { alignItems: 'center', paddingVertical: 48 },
+  cardStudyBtn: { width: "100%" },
+  empty: { alignItems: "center", paddingVertical: 48 },
   emptyText: { fontSize: 16, marginTop: 12 },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 16,
   },
   modalBox: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
     borderRadius: 12,
     borderWidth: 1,
     padding: 24,
   },
   modalBoxSm: { maxWidth: 360 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
-  modalLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+  modalLabel: { fontSize: 12, fontWeight: "600", marginBottom: 4 },
   modalInput: { marginBottom: 16 },
   modalInputFlex: { flex: 1, marginBottom: 0 },
   modalBody: { fontSize: 14, marginBottom: 20 },
-  editTagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  editTagChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9999 },
-  editTagText: { fontSize: 12, fontWeight: '500' },
-  editTagForm: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  editTagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
+  editTagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 9999,
+  },
+  editTagText: { fontSize: 12, fontWeight: "500" },
+  editTagForm: { flexDirection: "row", gap: 8, marginBottom: 20 },
   modalBtnSm: { paddingHorizontal: 16 },
-  modalActions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
+  modalActions: { flexDirection: "row", gap: 12, justifyContent: "flex-end" },
 });
