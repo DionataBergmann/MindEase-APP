@@ -21,6 +21,7 @@ import {
   type ImageSource,
   type PdfSource,
 } from "@/lib/content-processing";
+import { randomUUID } from "@/lib/uuid";
 import type { ProcessContentResponse } from "@/types/process-content";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -186,13 +187,14 @@ export default function NewProjectScreen() {
         (pdfSources.length > 0 ? pdfSources[0].name.replace(/\.pdf$/i, "") : null) ||
         (imageSources.length > 0 ? "Fotos" : "Sem título");
       const materiais = results.map((result, i) => ({
-        id: `material-${Date.now()}-${i}`,
+        id: randomUUID(),
         nomeArquivo: getTopicDisplayNameWithPdfNames(i, pdfSources, imageSources.length),
         resumo: result.resumo,
         resumoBreve: result.resumoBreve,
         resumoMedio: result.resumoMedio,
         resumoCompleto: result.resumoCompleto,
         cards: result.cards,
+        ...(result.flashcards && result.flashcards.length > 0 ? { flashcards: result.flashcards } : {}),
       }));
       await addDoc(collection(db, "projects"), {
         userId: user.uid,

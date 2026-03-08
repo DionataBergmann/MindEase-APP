@@ -20,8 +20,21 @@ function shuffle<T>(arr: T[]): T[] {
 
 function buildQuizItems(cards: ProjectCard[]): QuizItem[] {
   if (cards.length === 0) return [];
-  const allAnswers = cards.map((c) => c.conteudo);
   return shuffle(cards).map((card) => {
+    if (
+      Array.isArray(card.opcoes) &&
+      card.opcoes.length > 0 &&
+      typeof card.correctOptionIndex === "number" &&
+      card.correctOptionIndex >= 0 &&
+      card.correctOptionIndex < card.opcoes.length
+    ) {
+      return {
+        question: card.titulo,
+        correctAnswer: card.opcoes[card.correctOptionIndex]!,
+        options: card.opcoes,
+      };
+    }
+    const allAnswers = cards.map((c) => c.conteudo);
     const others = allAnswers.filter((a) => a !== card.conteudo);
     const wrong = shuffle(others).slice(0, Math.min(3, others.length));
     const options = shuffle([card.conteudo, ...wrong]);

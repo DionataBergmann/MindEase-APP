@@ -105,6 +105,7 @@ export default function HomeScreen() {
                       nomeArquivo: "PDF",
                       resumo: data.resumo ?? "",
                       cards: data.cards ?? [],
+                      flashcards: data.flashcards ?? undefined,
                     },
                   ]
                 : [];
@@ -232,7 +233,16 @@ export default function HomeScreen() {
   }[] = [];
   projects.forEach((p) => {
     p.materiais?.forEach((m) => {
-      (m.cards ?? []).forEach((card, cardIndex) => {
+      const set =
+        m.flashcards && m.flashcards.length > 0
+          ? m.flashcards.map((f) => ({
+              titulo: f.titulo,
+              conteudo: f.conteudo,
+              nextReviewAt: f.nextReviewAt,
+              intervalLevel: f.intervalLevel,
+            }))
+          : m.cards ?? [];
+      set.forEach((card, cardIndex) => {
         if (isCardDueForReview(card)) dueCards.push({ project: p, material: m, cardIndex });
       });
     });

@@ -137,6 +137,15 @@ export function FlashcardCarousel({
                   Pergunta
                 </ThemedText>
                 <ThemedText style={styles.faceTitle}>{currentCard.titulo}</ThemedText>
+                {currentCard.opcoes && currentCard.opcoes.length > 0 ? (
+                  <View style={styles.opcoesList}>
+                    {currentCard.opcoes.map((opt, i) => (
+                      <ThemedText key={i} style={styles.opcaoItem}>
+                        {opt}
+                      </ThemedText>
+                    ))}
+                  </View>
+                ) : null}
               </Animated.View>
               <Animated.View
                 style={[
@@ -214,6 +223,8 @@ const styles = StyleSheet.create({
   faceBack: {},
   faceLabel: { fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
   faceTitle: { fontSize: 18, fontWeight: "700" },
+  opcoesList: { marginTop: 12, gap: 6 },
+  opcaoItem: { fontSize: 15, lineHeight: 22 },
   faceContent: { fontSize: 15, lineHeight: 22 },
   footer: { fontSize: 12, marginTop: 12, textAlign: "center" },
   buttons: { flexDirection: "row", gap: 16, marginTop: 16 },
