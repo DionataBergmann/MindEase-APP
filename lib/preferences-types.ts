@@ -21,6 +21,8 @@ export type UserPreferences = {
   modoFoco: boolean;
   avisoTransicao: boolean;
   pausasPomodoro: boolean;
+  pomodoroWorkMinutes: number | null;
+  pomodoroBreakMinutes: number;
   modoFocoEsconderMenu: boolean;
   nivelResumo: NivelResumo;
 };
@@ -36,6 +38,8 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   modoFoco: false,
   avisoTransicao: true,
   pausasPomodoro: false,
+  pomodoroWorkMinutes: null,
+  pomodoroBreakMinutes: 5,
   modoFocoEsconderMenu: false,
   nivelResumo: 'medio',
 };
