@@ -101,20 +101,22 @@ export function StudyTimer({
             {formatTime(secondsRemaining)}
           </ThemedText>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setIsRunning((v) => !v)}
-          style={[styles.iconBtn, { backgroundColor: colors.primary + "30" }]}
-          activeOpacity={0.8}
-        >
-          <Feather name={isRunning ? "pause" : "play"} size={18} color={colors.foreground} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleReset}
-          style={[styles.iconBtn, { backgroundColor: colors.primary + "30" }]}
-          activeOpacity={0.8}
-        >
-          <Feather name="rotate-ccw" size={18} color={colors.foreground} />
-        </TouchableOpacity>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            onPress={() => setIsRunning((v) => !v)}
+            style={[styles.iconBtn, { backgroundColor: colors.primary + "30" }]}
+            activeOpacity={0.8}
+          >
+            <Feather name={isRunning ? "pause" : "play"} size={18} color={colors.foreground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleReset}
+            style={[styles.iconBtn, { backgroundColor: colors.primary + "30" }]}
+            activeOpacity={0.8}
+          >
+            <Feather name="rotate-ccw" size={18} color={colors.foreground} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {modalOpen && (
@@ -172,18 +174,26 @@ const styles = StyleSheet.create({
   wrapper: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
+    justifyContent: "space-between",
     gap: 6,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
+    minWidth: 160,
+    minHeight: 44,
   },
   time: {
     fontVariant: ["tabular-nums"],
     fontSize: 15,
     fontWeight: "600",
     minWidth: 44,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   iconBtn: {
     padding: 6,
