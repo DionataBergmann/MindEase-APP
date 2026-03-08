@@ -110,9 +110,11 @@ function getCardsWithSourceForCarousel(project: Project): ProjectCardWithSource[
       return set.map((item, i) => ({
         materialId: m.id,
         materialName: m.nomeArquivo ?? "PDF",
-        card: "opcoes" in item ? item : { titulo: item.titulo, conteudo: item.conteudo },
+        card: useFlashcards
+          ? { titulo: item.titulo, conteudo: item.conteudo }
+          : (item as ProjectCard),
         indexInMaterial: i,
-        useFlashcards: useFlashcards as const,
+        useFlashcards,
       }));
     });
   }

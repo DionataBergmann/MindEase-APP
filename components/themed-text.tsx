@@ -58,7 +58,7 @@ export function ThemedText({
     ? {
         ...base,
         fontSize: (base.fontSize ?? 16) * fontScale,
-        lineHeight: (base.lineHeight ?? base.fontSize ?? 16) * fontScale,
+        lineHeight: ("lineHeight" in base ? base.lineHeight : base.fontSize ?? 16) * fontScale,
       }
     : undefined;
 

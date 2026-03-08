@@ -164,7 +164,7 @@ export default function MaterialStudyScreen() {
     getPreferences().then((p) => {
       setPrefs(p);
       const tab = getPreferredStudyTab(p);
-      setActiveTab((tab === "revisar" ? "flashcards" : tab) as StudyTab);
+      setActiveTab(tab);
       setModoFoco(p.modoFoco);
     });
   }, []);
