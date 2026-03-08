@@ -129,6 +129,8 @@ export default function EstudarScreen() {
   const [modoFoco, setModoFoco] = useState(false);
   const [showSessionReminder, setShowSessionReminder] = useState(false);
   const [pomodoroBreak, setPomodoroBreak] = useState<{ active: boolean; secondsLeft: number }>({ active: false, secondsLeft: 0 });
+  const [showTimerCompleteModal, setShowTimerCompleteModal] = useState(false);
+  const [sessionMinutesOverride, setSessionMinutesOverride] = useState<number | null>(null);
   const [editResumoMaterialId, setEditResumoMaterialId] = useState<string | null>(null);
   const [editResumoValue, setEditResumoValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -334,8 +336,11 @@ export default function EstudarScreen() {
   const materiais = getMateriais(project);
   const totalMin = Math.max(5, cards.length * 3);
   const sessionDuration = prefs ? getSessionDuration(prefs) : { minutes: 28, label: '25-30 min' };
-  const effectiveMinutes = Math.min(sessionDuration.minutes, totalMin);
-  const effectiveLabel = effectiveMinutes < sessionDuration.minutes ? `${effectiveMinutes} min` : sessionDuration.label;
+  const workMinutesBase = prefs?.pomodoroWorkMinutes ?? sessionDuration.minutes;
+  const effectiveMinutes = Math.min(workMinutesBase, totalMin);
+  const sessionMinutes = sessionMinutesOverride ?? effectiveMinutes;
+  const effectiveLabel = effectiveMinutes < workMinutesBase ? `${effectiveMinutes} min` : (prefs?.pomodoroWorkMinutes != null ? `${workMinutesBase} min` : sessionDuration.label);
+  const pomodoroBreakMinutes = Math.min(60, Math.max(1, prefs?.pomodoroBreakMinutes ?? 5));
 
   const tabs: { key: StudyTab; label: string; icon: keyof typeof Feather.glyphMap }[] = [
     { key: 'flashcards', label: 'Flashcards', icon: 'layers' },
@@ -393,35 +398,75 @@ export default function EstudarScreen() {
           </View>
         )}
         {pomodoroBreak.active && (
-          <View style={[styles.pomodoroBlock, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40', borderWidth: borderW, marginBottom: 16 * spacingScale, padding: 20 * spacingScale }]}>
-            {pomodoroBreak.secondsLeft > 0 ? (
-              <>
-                <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground }]}>Pausa de 5 min</ThemedText>
-                <ThemedText style={styles.pomodoroTime}>
-                  {String(Math.floor(pomodoroBreak.secondsLeft / 60)).padStart(2, '0')}:{String(pomodoroBreak.secondsLeft % 60).padStart(2, '0')}
-                </ThemedText>
-              </>
-            ) : (
-              <>
-                <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground }]}>Pausa concluída.</ThemedText>
-                <Button onPress={() => { setPomodoroBreak({ active: false, secondsLeft: 0 }); setShowSessionReminder(true); }}>
-                  <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Voltar ao estudo</ThemedText>
-                </Button>
-              </>
-            )}
-          </View>
+          <Modal visible transparent animationType="fade">
+            <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+              <View style={[styles.modalCardPausa, { backgroundColor: colors.card, borderColor: colors.primary + '40' }]}>
+                <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground }]}>Pausa</ThemedText>
+                {pomodoroBreak.secondsLeft > 0 ? (
+                  <>
+                    <ThemedText style={[styles.modalHint, { color: colors.mutedForeground }]}>
+                      Pausa de {pomodoroBreakMinutes} min — descanse um pouco.
+                    </ThemedText>
+                    <ThemedText style={[styles.pomodoroTime, { marginVertical: 16 }]}>
+                      {String(Math.floor(pomodoroBreak.secondsLeft / 60)).padStart(2, '0')}:{String(pomodoroBreak.secondsLeft % 60).padStart(2, '0')}
+                    </ThemedText>
+                    <ThemedText style={[styles.modalHint, { color: colors.mutedForeground, fontSize: 12 }]}>
+                      Aguarde o fim da pausa para voltar ao estudo.
+                    </ThemedText>
+                  </>
+                ) : (
+                  <>
+                    <ThemedText style={[styles.pomodoroTitle, { color: colors.foreground, marginBottom: 16 }]}>Pausa concluída.</ThemedText>
+                    <Button onPress={() => { setPomodoroBreak({ active: false, secondsLeft: 0 }); setShowSessionReminder(true); }}>
+                      <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Voltar ao estudo</ThemedText>
+                    </Button>
+                  </>
+                )}
+              </View>
+            </View>
+          </Modal>
         )}
+
+        {/* Modal: timer encerrado */}
+        {showTimerCompleteModal && prefs && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]} onPress={() => setShowTimerCompleteModal(false)}>
+              <Pressable style={[styles.modalCardPausa, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+                <ThemedText style={[styles.modalTitle, { color: colors.foreground }]}>Sessão concluída</ThemedText>
+                <ThemedText style={[styles.modalHint, { color: colors.mutedForeground }]}>
+                  O tempo de foco acabou. Que tal uma pausa antes de continuar?
+                </ThemedText>
+                <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center', marginTop: 20 }}>
+                  {prefs.pausasPomodoro ? (
+                    <>
+                      <Button onPress={() => { setPomodoroBreak({ active: true, secondsLeft: pomodoroBreakMinutes * 60 }); setShowTimerCompleteModal(false); }}>
+                        <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>Iniciar pausa ({pomodoroBreakMinutes} min)</ThemedText>
+                      </Button>
+                      <Button variant="outline" onPress={() => { setShowSessionReminder(true); setShowTimerCompleteModal(false); }}>
+                        <ThemedText style={{ color: colors.foreground, fontWeight: '600' }}>Agora não</ThemedText>
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onPress={() => { setShowSessionReminder(true); setShowTimerCompleteModal(false); }}>
+                      <ThemedText style={{ color: colors.primaryForeground, fontWeight: '600' }}>OK</ThemedText>
+                    </Button>
+                  )}
+                </View>
+              </Pressable>
+            </Pressable>
+          </Modal>
+        )}
+
         {prefs && !pomodoroBreak.active && (
           <View style={[styles.timerRow, styles.timerAndFocoRow, { marginBottom: 16 * spacingScale, gap: 12 * spacingScale }]}>
             <StudyTimer
-              initialMinutes={effectiveMinutes}
-              onComplete={() => {
-                if (prefs.alertasTempo) {
-                  Alert.alert('Tempo de sessão', 'Você está estudando há um tempo. Que tal uma pausa?');
-                }
-                if (prefs.pausasPomodoro) setPomodoroBreak({ active: true, secondsLeft: 5 * 60 });
-                else setShowSessionReminder(true);
+              initialMinutes={sessionMinutes}
+              editable
+              onMinutesChange={async (minutes) => {
+                setSessionMinutesOverride(minutes);
+                await setPreferences({ pomodoroWorkMinutes: minutes });
               }}
+              onComplete={() => setShowTimerCompleteModal(true)}
             />
             <Button
               variant="outline"
@@ -659,7 +704,9 @@ const styles = StyleSheet.create({
   backBtnWrap: { marginTop: 24, alignItems: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalBox: { borderRadius: 12, padding: 20, maxHeight: '90%' },
+  modalCardPausa: { borderRadius: 12, padding: 24, borderWidth: 1, alignSelf: 'center', minWidth: 280 },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  modalHint: { fontSize: 14, marginBottom: 8 },
   textArea: { minHeight: 200, borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16 },
   modalActions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
 });

@@ -151,6 +151,8 @@ export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
+  const [pomodoroInput, setPomodoroInput] = useState('');
+  const [pomodoroWorkInput, setPomodoroWorkInput] = useState('');
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -167,6 +169,8 @@ export default function ProfileScreen() {
       setEmail(user.email ?? '');
       const p = await getPreferences();
       setPrefs(p);
+      setPomodoroInput(String(p.pomodoroBreakMinutes ?? 5));
+      setPomodoroWorkInput(p.pomodoroWorkMinutes != null ? String(p.pomodoroWorkMinutes) : '');
       setLoading(false);
     });
     return () => unsub();
@@ -305,11 +309,48 @@ export default function ProfileScreen() {
           />
           <RowSwitch
             title="Pausas tipo Pomodoro"
-            subtitle="Após o timer de sessão, oferece pausa de 5 min"
+            subtitle="Após o timer de sessão, oferece pausa configurável"
             value={prefs.pausasPomodoro}
             onValueChange={(v) => updatePref('pausasPomodoro', v)}
             colors={colors}
           />
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: colors.foreground }]}>Duração do foco (min)</ThemedText>
+            <ThemedText style={[styles.hint, { color: colors.mutedForeground }]}>
+              Vazio = usar duração da sessão (curta/média/longa). 1–120.
+            </ThemedText>
+            <Input
+              value={pomodoroWorkInput}
+              keyboardType="number-pad"
+              placeholder="Usar duração da sessão"
+              onChangeText={(t) => setPomodoroWorkInput(t.replace(/\D/g, ''))}
+              onBlur={async () => {
+                const n = pomodoroWorkInput.trim() === '' ? null : parseInt(pomodoroWorkInput, 10);
+                const value = n === null || Number.isNaN(n) ? null : Math.min(120, Math.max(1, n));
+                await updatePref('pomodoroWorkMinutes', value);
+                setPomodoroWorkInput(value != null ? String(value) : '');
+              }}
+              style={[styles.inputReadonly, { backgroundColor: colors.muted + '80', minWidth: 80 }]}
+            />
+          </View>
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: colors.foreground }]}>Duração da pausa Pomodoro (min)</ThemedText>
+            <ThemedText style={[styles.hint, { color: colors.mutedForeground }]}>
+              1–60 minutos. Valor usado quando a pausa começar.
+            </ThemedText>
+            <Input
+              value={pomodoroInput}
+              keyboardType="number-pad"
+              onChangeText={(t) => setPomodoroInput(t.replace(/\D/g, ''))}
+              onBlur={async () => {
+                const n = parseInt(pomodoroInput, 10);
+                const clamped = Number.isNaN(n) || n < 1 ? 5 : Math.min(60, Math.max(1, n));
+                await updatePref('pomodoroBreakMinutes', clamped);
+                setPomodoroInput(String(clamped));
+              }}
+              style={[styles.inputReadonly, { backgroundColor: colors.muted + '80', minWidth: 80 }]}
+            />
+          </View>
         </View>
 
         {/* Conforto visual */}
