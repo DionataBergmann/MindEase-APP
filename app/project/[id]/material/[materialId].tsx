@@ -617,29 +617,33 @@ export default function MaterialStudyScreen() {
               { marginBottom: 12 * spacingScale, gap: 12 * spacingScale },
             ]}
           >
-            <StudyTimer
-              initialMinutes={sessionMinutes}
-              editable
-              onMinutesChange={async (minutes) => {
-                setSessionMinutesOverride(minutes);
-                await setPreferences({ pomodoroWorkMinutes: minutes });
-              }}
-              onComplete={() => setShowTimerCompleteModal(true)}
-            />
-            <Button
-              variant="outline"
-              onPress={async () => {
-                const next = !modoFoco;
-                setModoFoco(next);
-                await setPreferences({ modoFoco: next });
-              }}
-              style={styles.focoBtn}
-            >
-              <Feather name="target" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-              <ThemedText style={{ color: colors.primary, fontWeight: "600", fontSize: 14 }}>
-                {modoFoco ? "Sair do modo foco" : "Modo foco"}
-              </ThemedText>
-            </Button>
+            <View style={styles.timerFocoCell}>
+              <StudyTimer
+                initialMinutes={sessionMinutes}
+                editable
+                onMinutesChange={async (minutes) => {
+                  setSessionMinutesOverride(minutes);
+                  await setPreferences({ pomodoroWorkMinutes: minutes });
+                }}
+                onComplete={() => setShowTimerCompleteModal(true)}
+              />
+            </View>
+            <View style={styles.timerFocoCell}>
+              <Button
+                variant="outline"
+                onPress={async () => {
+                  const next = !modoFoco;
+                  setModoFoco(next);
+                  await setPreferences({ modoFoco: next });
+                }}
+                style={styles.focoBtn}
+              >
+                <Feather name="target" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+                <ThemedText style={{ color: colors.primary, fontWeight: "600", fontSize: 14 }}>
+                  {modoFoco ? "Sair do modo foco" : "Modo foco"}
+                </ThemedText>
+              </Button>
+            </View>
           </View>
         )}
 
@@ -883,8 +887,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "700", marginBottom: 4 },
   meta: { fontSize: 14, marginBottom: 8 },
   timerRow: { marginBottom: 12 },
-  timerAndFocoRow: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
-  focoBtn: { alignSelf: "flex-start" },
+  timerAndFocoRow: { flexDirection: "row", alignItems: "stretch", justifyContent: "space-between", gap: 12, flexWrap: "wrap" },
+  timerFocoCell: { flex: 1, minWidth: 140, maxWidth: 280 },
+  focoBtn: { alignSelf: "stretch", minWidth: 140 },
   reminderBanner: {
     flexDirection: "row",
     alignItems: "center",
