@@ -415,7 +415,7 @@ export default function MaterialStudyScreen() {
     emptyFlashcardsMessage:
       'Nenhum card neste tópico. Crie flashcards em "Minhas flashcards".',
     quizEmptyText: "Nenhum card para quiz neste tópico.",
-    chatHeaderText: "Pergunte sobre este tópico. A IA usa o resumo como contexto.",
+    chatHeaderText: "Pergunte sobre este tópico.",
     buildChatContext: () => resumoText || "Sem resumo.",
     editResumoOpen,
     editResumoValue,
