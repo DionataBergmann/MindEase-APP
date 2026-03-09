@@ -3,8 +3,6 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
@@ -57,7 +55,12 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.card, borderColor: colors.border },
+      ]}
+    >
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <ThemedText style={[styles.headerText, { color: colors.mutedForeground }]}>
           {headerText}
@@ -68,6 +71,7 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
         style={styles.messages}
         contentContainerStyle={styles.messagesContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {chatMessages.length === 0 && (
           <ThemedText style={[styles.emptyHint, { color: colors.mutedForeground }]}>
@@ -114,10 +118,7 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
         )}
       </ScrollView>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={[styles.footer, { borderTopColor: colors.border }]}
-      >
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <Input
           value={chatInput}
           onChangeText={setChatInput}
@@ -143,16 +144,21 @@ export function StudyChat({ headerText, buildContext }: StudyChatProps) {
             </>
           )}
         </Button>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { borderRadius: 12, borderWidth: 1, overflow: "hidden", minHeight: 280 },
+  container: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+    minHeight: 380,
+  },
   header: { padding: 16, borderBottomWidth: 1 },
   headerText: { fontSize: 14 },
-  messages: { maxHeight: 360 },
+  messages: { maxHeight: 480 },
   messagesContent: { padding: 16, paddingBottom: 8 },
   emptyHint: { fontSize: 14, textAlign: "center", paddingVertical: 24 },
   bubbleWrap: { marginBottom: 12 },

@@ -17,6 +17,8 @@ import {
   Pressable,
   TextInput,
   useWindowDimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import type { ProjectCard, Material } from "@/types/project";
@@ -165,6 +167,7 @@ export function StudyScreen({
   const borderW = contrastLevel === "alto" ? 2 : 1;
   const isProject = scope.type === "project";
   const { width: windowWidth } = useWindowDimensions();
+
   const tabGap = 8 * spacingScale;
   const stripPadding = 8 * spacingScale;
   const scrollPadding = 16 * spacingScale;
@@ -172,17 +175,22 @@ export function StudyScreen({
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingHorizontal: 16 * spacingScale,
-            paddingBottom: (insets.bottom + 24) * spacingScale,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboardWrap}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingHorizontal: 16 * spacingScale,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {!modoFoco && (
           <TouchableOpacity
             style={[styles.backRow, { marginBottom: 16 * spacingScale, gap: 8 * spacingScale }]}
@@ -624,6 +632,7 @@ export function StudyScreen({
           </>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {isProject && (
         <Modal visible={!!scope.editResumoMaterialId} transparent animationType="fade">
@@ -716,6 +725,7 @@ export function StudyScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  keyboardWrap: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16 },
   backRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 },

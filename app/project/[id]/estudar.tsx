@@ -376,8 +376,7 @@ export default function EstudarScreen() {
     resumosWithMaterial,
     emptyFlashcardsMessage: "Nenhum card para estudar. Adicione PDFs ao projeto para gerar cards.",
     quizEmptyText: "Nenhum card para quiz. Adicione PDFs ao projeto.",
-    chatHeaderText:
-      "Pergunte sobre o conteúdo do projeto. A IA usa os resumos como contexto.",
+    chatHeaderText: "Pergunte sobre o conteúdo do projeto.",
     buildChatContext: () =>
       resumosWithMaterial.map((b) => `${b.nomeArquivo}:\n${b.resumo}`).join("\n\n"),
     editResumoMaterialId,
