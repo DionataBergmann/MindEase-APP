@@ -1,3 +1,6 @@
+/**
+ * Domínio: entidades projeto, material e card.
+ */
 
 export type ProjectCard = {
   titulo: string;

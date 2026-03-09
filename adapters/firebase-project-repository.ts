@@ -15,6 +15,7 @@ import {
 import type { Project, Material } from "@/domain/project";
 import type { IProjectRepository } from "@/ports/project-repository";
 
+/** Formata updatedAt do Firestore para texto (Hoje, Ontem, X dias atrás…). */
 function formatLastAccess(ts: Timestamp | undefined): string {
   if (!ts) return "—";
   const d = ts.toDate();
@@ -28,6 +29,7 @@ function formatLastAccess(ts: Timestamp | undefined): string {
   return `${Math.floor(diffDays / 30)} mês(es) atrás`;
 }
 
+/** Converte doc Firestore em entidade Project do domínio. */
 function mapDocToProject(docId: string, data: Record<string, unknown>): Project {
   const materiais: Material[] = Array.isArray(data.materiais)
     ? (data.materiais as Material[])
@@ -57,9 +59,11 @@ function mapDocToProject(docId: string, data: Record<string, unknown>): Project 
   };
 }
 
+/** Adapter: lê/escreve projetos no Firestore. Implementa IProjectRepository. */
 export class FirebaseProjectRepository implements IProjectRepository {
   constructor(private db: Firestore | null) {}
 
+  /** Lista projetos do usuário (ordenados por updatedAt desc). */
   async getByUserId(userId: string): Promise<Project[]> {
     if (!this.db) return [];
     const q = query(
@@ -71,6 +75,7 @@ export class FirebaseProjectRepository implements IProjectRepository {
     return snap.docs.map((d) => mapDocToProject(d.id, d.data() as Record<string, unknown>));
   }
 
+  /** Busca um projeto por id. */
   async getById(projectId: string): Promise<Project | null> {
     if (!this.db) return null;
     const snap = await getDoc(doc(this.db, "projects", projectId));
@@ -78,6 +83,7 @@ export class FirebaseProjectRepository implements IProjectRepository {
     return mapDocToProject(snap.id, snap.data() as Record<string, unknown>);
   }
 
+  /** Atualiza projeto no Firestore (campos editáveis). */
   async save(project: Project): Promise<void> {
     if (!this.db) return;
     const ref = doc(this.db, "projects", project.id);
@@ -94,6 +100,7 @@ export class FirebaseProjectRepository implements IProjectRepository {
     });
   }
 
+  /** Remove projeto do Firestore. */
   async delete(projectId: string): Promise<void> {
     if (!this.db) return;
     await deleteDoc(doc(this.db, "projects", projectId));

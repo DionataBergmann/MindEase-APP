@@ -1,3 +1,7 @@
+/**
+ * Domínio: tipos e funções puras de preferências (sem I/O).
+ * Persistência fica nos adapters (portas).
+ */
 
 export type FormatoPreferido = "resumo" | "flashcards" | "quiz" | "chat";
 export type DuracaoSessao = "curta" | "media" | "longa";
@@ -43,11 +47,13 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 
 export type StudyTab = "flashcards" | "quiz" | "chat" | "minhas_questoes";
 
+/** Aba de estudo preferida (mapeia formatoPreferido). */
 export function getPreferredStudyTab(prefs: UserPreferences): StudyTab {
   if (prefs.formatoPreferido === "resumo") return "flashcards";
   return prefs.formatoPreferido;
 }
 
+/** Minutos e label da duração de sessão (curta/média/longa). */
 export function getSessionDuration(prefs: UserPreferences): { minutes: number; label: string } {
   const d = prefs.duracaoSessao;
   if (d === "curta") return { minutes: 18, label: "15-20 min" };
@@ -55,6 +61,7 @@ export function getSessionDuration(prefs: UserPreferences): { minutes: number; l
   return { minutes: 28, label: "25-30 min" };
 }
 
+/** Texto do resumo a exibir conforme nível (breve/médio/completo). */
 export function getDisplayResumo(
   material: { resumo: string; resumoBreve?: string; resumoMedio?: string; resumoCompleto?: string },
   nivel: NivelResumo

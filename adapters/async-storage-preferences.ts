@@ -4,7 +4,9 @@ import type { IPreferencesStorage } from "@/ports/preferences-storage";
 
 const STORAGE_KEY = "mindease_preferences";
 
+/** Adapter: persiste preferências no AsyncStorage (React Native). Implementa IPreferencesStorage. */
 export class AsyncStoragePreferencesStorage implements IPreferencesStorage {
+  /** Lê preferências do dispositivo (ou defaults). */
   async get(): Promise<UserPreferences> {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -22,6 +24,7 @@ export class AsyncStoragePreferencesStorage implements IPreferencesStorage {
     }
   }
 
+  /** Atualiza preferências (merge parcial) e persiste. */
   async set(partial: Partial<UserPreferences>): Promise<UserPreferences> {
     const current = await this.get();
     const next = { ...current, ...partial };
@@ -30,4 +33,5 @@ export class AsyncStoragePreferencesStorage implements IPreferencesStorage {
   }
 }
 
+/** Instância única usada pelo lib e use-cases. */
 export const asyncStoragePreferencesStorage = new AsyncStoragePreferencesStorage();

@@ -1,3 +1,4 @@
+/** Reexporta os casos de uso de preferências. */
 export {
   getUserPreferences,
   setUserPreferences,
