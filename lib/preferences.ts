@@ -1,5 +1,5 @@
 /**
- * Preferences facade — async get/set for app; re-exports types and pure helpers.
+ * Preferences facade — uses domain + adapter (Clean Architecture).
  */
 
 import {
@@ -9,8 +9,8 @@ import {
   type UserPreferences,
   type NivelResumo,
   type StudyTab,
-} from "./preferences-types";
-import { getPreferencesAsync, setPreferencesAsync } from "./preferences-storage";
+} from "@/domain/preferences";
+import { asyncStoragePreferencesStorage } from "@/adapters";
 
 export type {
   FormatoPreferido,
@@ -22,11 +22,12 @@ export type {
   NivelResumo,
   UserPreferences,
   StudyTab,
-} from "./preferences-types";
-export { DEFAULT_USER_PREFERENCES } from "./preferences-types";
+} from "@/domain/preferences";
+export { DEFAULT_USER_PREFERENCES } from "@/domain/preferences";
 
-export const getPreferences = getPreferencesAsync;
-export const setPreferences = setPreferencesAsync;
+export const getPreferences = () => asyncStoragePreferencesStorage.get();
+export const setPreferences = (partial: Partial<UserPreferences>) =>
+  asyncStoragePreferencesStorage.set(partial);
 
 export function getPreferredStudyTab(prefs: UserPreferences): StudyTab {
   return domainGetPreferredStudyTab(prefs);
